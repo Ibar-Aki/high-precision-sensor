@@ -1,0 +1,29 @@
+{
+    "name": "高精度傾斜角センサー",
+    "short_name": "傾斜計",
+    "description": "iPhoneの内蔵センサーで設備の傾きを高精度に計測するPWA",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#0a0e1a",
+    "theme_color": "#0a0e1a",
+    "lang": "ja",
+    "icons": [
+        {
+            "src": "icons/icon-192.svg",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/icon-512.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ],
+    "categories": [
+        "utilities",
+        "productivity"
+    ]
+}

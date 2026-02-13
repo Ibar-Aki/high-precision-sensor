@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="傾斜計">
+  <meta name="description" content="高精度傾斜角センサー - iPhoneの内蔵センサーで設備の傾きを精密に計測">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>高精度傾斜角センサー</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- ========== スプラッシュ / 権限リクエスト画面 ========== -->
+  <div id="splash-screen" class="screen active">
+    <div class="splash-container">
+      <div class="splash-icon">
+        <svg viewBox="0 0 120 120" class="splash-logo">
+          <defs>
+            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#00d4ff" />
+              <stop offset="50%" style="stop-color:#7b2ff7" />
+              <stop offset="100%" style="stop-color:#ff2d87" />
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="55" fill="none" stroke="url(#logoGrad)" stroke-width="3" opacity="0.3" />
+          <circle cx="60" cy="60" r="40" fill="none" stroke="url(#logoGrad)" stroke-width="2" opacity="0.5" />
+          <circle cx="60" cy="60" r="8" fill="url(#logoGrad)" />
+          <line x1="60" y1="5" x2="60" y2="25" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" />
+          <line x1="60" y1="95" x2="60" y2="115" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" />
+          <line x1="5" y1="60" x2="25" y2="60" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" />
+          <line x1="95" y1="60" x2="115" y2="60" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </div>
+      <h1 class="splash-title">高精度傾斜角センサー</h1>
+      <p class="splash-subtitle">設備の傾きを精密に計測</p>
+      <div class="splash-features">
+        <div class="feature-item">
+          <span class="feature-icon">🎯</span>
+          <span>カルマンフィルタによる高精度計測</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🔊</span>
+          <span>方向別音声フィードバック</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">📐</span>
+          <span>2軸同時リアルタイム表示</span>
+        </div>
+      </div>
+      <button id="btn-start" class="btn-primary btn-glow">
+        <span class="btn-icon">📱</span>
+        センサーを有効にする
+      </button>
+      <p class="splash-note">※ iOSではセンサーへのアクセス許可が必要です</p>
+    </div>
+  </div>
+
+  <!-- ========== メイン計測画面 ========== -->
+  <div id="main-screen" class="screen">
+    <header class="app-header">
+      <div class="header-left">
+        <h2 class="app-title">傾斜角センサー</h2>
+        <div id="sensor-status" class="status-badge status-inactive">
+          <span class="status-dot"></span>
+          <span class="status-text">待機中</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="btn-sound-toggle" class="btn-icon-only" title="サウンド ON/OFF" aria-label="サウンド切替">
+          <svg viewBox="0 0 24 24" class="icon">
+            <path
+              d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+          </svg>
+        </button>
+        <button id="btn-settings" class="btn-icon-only" title="設定" aria-label="設定を開く">
+          <svg viewBox="0 0 24 24" class="icon">
+            <path
+              d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 角度表示エリア -->
+    <main class="measurement-area">
+      <!-- SVG 水準器 -->
+      <div class="level-container">
+        <svg id="level-svg" viewBox="0 0 300 300" class="level-indicator">
+          <defs>
+            <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color:#1a1f35" />
+              <stop offset="100%" style="stop-color:#0a0e1a" />
+            </radialGradient>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#00d4ff" />
+              <stop offset="100%" style="stop-color:#7b2ff7" />
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="bubble-shadow">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#00d4ff" flood-opacity="0.5" />
+            </filter>
+          </defs>
+          <!-- 背景 -->
+          <circle cx="150" cy="150" r="145" fill="url(#bgGrad)" stroke="#1e2440" stroke-width="1" />
+          <!-- グリッドリング -->
+          <circle cx="150" cy="150" r="120" fill="none" stroke="#1e2440" stroke-width="0.5" />
+          <circle cx="150" cy="150" r="90" fill="none" stroke="#1e2440" stroke-width="0.5" />
+          <circle cx="150" cy="150" r="60" fill="none" stroke="#1e2440" stroke-width="0.5" />
+          <circle cx="150" cy="150" r="30" fill="none" stroke="#1e2440" stroke-width="0.5" />
+          <!-- 十字線 -->
+          <line x1="150" y1="5" x2="150" y2="295" stroke="#1e2440" stroke-width="0.5" />
+          <line x1="5" y1="150" x2="295" y2="150" stroke="#1e2440" stroke-width="0.5" />
+          <!-- 方向ラベル -->
+          <text x="150" y="22" text-anchor="middle" class="direction-label">前</text>
+          <text x="150" y="290" text-anchor="middle" class="direction-label">後</text>
+          <text x="15" y="155" text-anchor="middle" class="direction-label">左</text>
+          <text x="285" y="155" text-anchor="middle" class="direction-label">右</text>
+          <!-- 外リング -->
+          <circle cx="150" cy="150" r="140" fill="none" stroke="url(#ringGrad)" stroke-width="2" opacity="0.6" />
+          <!-- 中心タ ーゲット -->
+          <circle cx="150" cy="150" r="6" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.8" />
+          <!-- バブル（傾きインジケーター） -->
+          <circle id="bubble" cx="150" cy="150" r="14" fill="#00d4ff" opacity="0.85" filter="url(#bubble-shadow)" />
+          <!-- 角度弧（ピッチ） -->
+          <path id="arc-pitch" fill="none" stroke="#00d4ff" stroke-width="3" stroke-linecap="round" opacity="0.7" />
+          <!-- 角度弧（ロール） -->
+          <path id="arc-roll" fill="none" stroke="#ff2d87" stroke-width="3" stroke-linecap="round" opacity="0.7" />
+        </svg>
+      </div>
+
+      <!-- デジタル角度表示 -->
+      <div class="digital-display">
+        <div class="angle-card glass-card">
+          <div class="angle-header">
+            <span class="angle-label">ピッチ（前後）</span>
+            <span id="pitch-direction" class="direction-indicator">―</span>
+          </div>
+          <div class="angle-value-container">
+            <span id="pitch-value" class="angle-value">0.000</span>
+            <span class="angle-unit">°</span>
+          </div>
+          <div class="angle-bar-container">
+            <div id="pitch-bar" class="angle-bar pitch-bar"></div>
+          </div>
+        </div>
+        <div class="angle-card glass-card">
+          <div class="angle-header">
+            <span class="angle-label">ロール（左右）</span>
+            <span id="roll-direction" class="direction-indicator">―</span>
+          </div>
+          <div class="angle-value-container">
+            <span id="roll-value" class="angle-value">0.000</span>
+            <span class="angle-unit">°</span>
+          </div>
+          <div class="angle-bar-container">
+            <div id="roll-bar" class="angle-bar roll-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 合成角度 -->
+      <div class="total-angle glass-card">
+        <span class="total-label">合成傾斜角</span>
+        <div class="total-value-container">
+          <span id="total-value" class="total-value">0.000</span>
+          <span class="total-unit">°</span>
+        </div>
+      </div>
+
+      <!-- 統計情報 -->
+      <div class="stats-row">
+        <div class="stat-item glass-card-sm">
+          <span class="stat-label">最大ピッチ</span>
+          <span id="max-pitch" class="stat-value">0.000°</span>
+        </div>
+        <div class="stat-item glass-card-sm">
+          <span class="stat-label">最大ロール</span>
+          <span id="max-roll" class="stat-value">0.000°</span>
+        </div>
+        <div class="stat-item glass-card-sm">
+          <span class="stat-label">サンプル数</span>
+          <span id="sample-count" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <!-- アクションボタン -->
+      <div class="action-row">
+        <button id="btn-calibrate" class="btn-action glass-card-sm">
+          <svg viewBox="0 0 24 24" class="btn-svg">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+          </svg>
+          キャリブレーション
+        </button>
+        <button id="btn-reset-stats" class="btn-action glass-card-sm">
+          <svg viewBox="0 0 24 24" class="btn-svg">
+            <path
+              d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+          </svg>
+          統計リセット
+        </button>
+        <button id="btn-lock" class="btn-action glass-card-sm">
+          <svg viewBox="0 0 24 24" class="btn-svg">
+            <path
+              d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+          </svg>
+          値ロック
+        </button>
+      </div>
+    </main>
+
+    <!-- ========== 設定パネル ========== -->
+    <div id="settings-panel" class="settings-panel">
+      <div class="settings-overlay" id="settings-overlay"></div>
+      <div class="settings-content glass-panel">
+        <div class="settings-header">
+          <h3>設定</h3>
+          <button id="btn-close-settings" class="btn-icon-only" aria-label="設定を閉じる">
+            <svg viewBox="0 0 24 24" class="icon">
+              <path
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="settings-body">
+          <!-- フィルタ設定 -->
+          <div class="setting-group">
+            <h4 class="setting-group-title">フィルタ設定</h4>
+            <div class="setting-item">
+              <label for="filter-alpha">EMA平滑化係数（α）</label>
+              <div class="slider-row">
+                <input type="range" id="filter-alpha" min="0.01" max="0.5" step="0.01" value="0.08" class="slider">
+                <span id="filter-alpha-val" class="slider-val">0.08</span>
+              </div>
+              <p class="setting-hint">小さいほど安定（遅延増）、大きいほど追従（ノイズ増）</p>
+            </div>
+            <div class="setting-item">
+              <label for="kalman-q">カルマンフィルタ プロセスノイズ（Q）</label>
+              <div class="slider-row">
+                <input type="range" id="kalman-q" min="0.0001" max="0.1" step="0.0001" value="0.001" class="slider">
+                <span id="kalman-q-val" class="slider-val">0.001</span>
+              </div>
+              <p class="setting-hint">小さいほど安定、大きいほど追従</p>
+            </div>
+            <div class="setting-item">
+              <label for="kalman-r">カルマンフィルタ 観測ノイズ（R）</label>
+              <div class="slider-row">
+                <input type="range" id="kalman-r" min="0.01" max="1.0" step="0.01" value="0.1" class="slider">
+                <span id="kalman-r-val" class="slider-val">0.10</span>
+              </div>
+            </div>
+            <div class="setting-item">
+              <label for="deadzone">デッドゾーン（°）</label>
+              <div class="slider-row">
+                <input type="range" id="deadzone" min="0" max="0.1" step="0.001" value="0.005" class="slider">
+                <span id="deadzone-val" class="slider-val">0.005</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 音声設定 -->
+          <div class="setting-group">
+            <h4 class="setting-group-title">音声設定</h4>
+            <div class="setting-item">
+              <label>音声モード</label>
+              <div class="toggle-group">
+                <button class="toggle-btn active" data-sound-mode="continuous">常時</button>
+                <button class="toggle-btn" data-sound-mode="threshold">閾値</button>
+              </div>
+            </div>
+            <div class="setting-item" id="threshold-setting">
+              <label for="sound-threshold">音声閾値（°）</label>
+              <div class="slider-row">
+                <input type="range" id="sound-threshold" min="0.1" max="10" step="0.1" value="1.0" class="slider">
+                <span id="sound-threshold-val" class="slider-val">1.0</span>
+              </div>
+              <p class="setting-hint">この角度以上で音が鳴ります</p>
+            </div>
+            <div class="setting-item">
+              <label for="master-volume">マスター音量</label>
+              <div class="slider-row">
+                <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.5" class="slider">
+                <span id="master-volume-val" class="slider-val">50%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 表示設定 -->
+          <div class="setting-group">
+            <h4 class="setting-group-title">表示設定</h4>
+            <div class="setting-item">
+              <label for="decimal-places">小数点以下桁数</label>
+              <div class="slider-row">
+                <input type="range" id="decimal-places" min="1" max="4" step="1" value="3" class="slider">
+                <span id="decimal-places-val" class="slider-val">3</span>
+              </div>
+            </div>
+            <div class="setting-item">
+              <label for="level-sensitivity">水準器の感度（°/フルスケール）</label>
+              <div class="slider-row">
+                <input type="range" id="level-sensitivity" min="1" max="45" step="1" value="10" class="slider">
+                <span id="level-sensitivity-val" class="slider-val">10</span>
+              </div>
+              <p class="setting-hint">バブルがフルスケールになる角度</p>
+            </div>
+          </div>
+
+          <!-- 情報 -->
+          <div class="setting-group">
+            <h4 class="setting-group-title">情報</h4>
+            <div class="app-info">
+              <p>高精度傾斜角センサー v1.0</p>
+              <p class="info-sub">カルマンフィルタ + 指数移動平均による<br>高精度ノイズ除去</p>
+              <p class="info-sub" id="sensor-info">センサー情報: 読み込み中...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Service Worker 登録
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+
+</html>
