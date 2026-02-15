@@ -1,13 +1,18 @@
-# OS
+# OS files
 .DS_Store
 Thumbs.db
-
-# Node
-node_modules/
+Desktop.ini
 
 # Logs
 *.log
+npm-debug.log*
 
-# Local env
-.env
-.env.*
+# Dependencies
+node_modules/
+dist/
+
+# Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo

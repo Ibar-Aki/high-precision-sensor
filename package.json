@@ -1,0 +1,19 @@
+{
+  "name": "high-precision-sensor",
+  "version": "1.0.0",
+  "description": "![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)\r ![Platform: iOS](https://img.shields.io/badge/Platform-iOS-blue.svg)",
+  "main": "sw.js",
+  "type": "module",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  }
+}

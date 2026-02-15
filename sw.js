@@ -7,11 +7,11 @@ const CACHE_NAME = 'tilt-sensor-v2';
 const ASSETS = [
     './',
     './index.html',
-    './style.css',
-    './app.js',
-    './manifest.json',
-    './icons/icon-192.svg',
-    './icons/icon-512.svg',
+    './assets/css/style.css',
+    './assets/js/app.js',
+    './assets/icons/icon-192.svg',
+    './assets/icons/icon-512.svg',
+    './manifest.json'
 ];
 
 // インストール: 全アセットをキャッシュ

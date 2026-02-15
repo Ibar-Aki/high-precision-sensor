@@ -37,7 +37,9 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -95,6 +97,7 @@ body {
   display: none;
   min-height: 100dvh;
 }
+
 .screen.active {
   display: flex;
 }
@@ -115,13 +118,18 @@ body {
   width: 200%;
   height: 200%;
   background: radial-gradient(ellipse at 30% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
-              radial-gradient(ellipse at 70% 80%, rgba(123, 47, 247, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse at 70% 80%, rgba(123, 47, 247, 0.06) 0%, transparent 50%);
   animation: bgShift 8s ease-in-out infinite alternate;
 }
 
 @keyframes bgShift {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(5%, -3%); }
+  0% {
+    transform: translate(0, 0);
+  }
+
+  100% {
+    transform: translate(5%, -3%);
+  }
 }
 
 .splash-container {
@@ -143,8 +151,17 @@ body {
 }
 
 @keyframes logoPulse {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.05); filter: brightness(1.2); }
+
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+  }
 }
 
 .splash-title {
@@ -216,8 +233,15 @@ body {
 }
 
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 30px rgba(0, 212, 255, 0.25), 0 0 60px rgba(123, 47, 247, 0.15); }
-  50% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.4), 0 0 80px rgba(123, 47, 247, 0.25); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.25), 0 0 60px rgba(123, 47, 247, 0.15);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(0, 212, 255, 0.4), 0 0 80px rgba(123, 47, 247, 0.25);
+  }
 }
 
 .btn-icon {
@@ -280,10 +304,12 @@ body {
   background: rgba(0, 255, 136, 0.1);
   color: var(--accent-green);
 }
+
 .status-badge.status-inactive {
   background: rgba(255, 149, 0, 0.1);
   color: var(--accent-orange);
 }
+
 .status-badge.status-error {
   background: rgba(255, 45, 135, 0.1);
   color: var(--accent-pink);
@@ -301,8 +327,17 @@ body {
 }
 
 @keyframes dotPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
 }
 
 .header-right {
@@ -412,11 +447,30 @@ body {
   background: var(--bg-glass);
 }
 
-.direction-indicator.dir-front { color: var(--accent-cyan); background: rgba(0, 212, 255, 0.1); }
-.direction-indicator.dir-back { color: var(--accent-purple); background: rgba(123, 47, 247, 0.1); }
-.direction-indicator.dir-left { color: var(--accent-pink); background: rgba(255, 45, 135, 0.1); }
-.direction-indicator.dir-right { color: var(--accent-orange); background: rgba(255, 149, 0, 0.1); }
-.direction-indicator.dir-level { color: var(--accent-green); background: rgba(0, 255, 136, 0.1); }
+.direction-indicator.dir-front {
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.direction-indicator.dir-back {
+  color: var(--accent-purple);
+  background: rgba(123, 47, 247, 0.1);
+}
+
+.direction-indicator.dir-left {
+  color: var(--accent-pink);
+  background: rgba(255, 45, 135, 0.1);
+}
+
+.direction-indicator.dir-right {
+  color: var(--accent-orange);
+  background: rgba(255, 149, 0, 0.1);
+}
+
+.direction-indicator.dir-level {
+  color: var(--accent-green);
+  background: rgba(0, 255, 136, 0.1);
+}
 
 .angle-value-container {
   display: flex;
@@ -752,29 +806,53 @@ body {
 /* ============================
    角度値カラーリング
    ============================ */
-.angle-value.level-ok { color: var(--accent-green); }
-.angle-value.level-warn { color: var(--accent-orange); }
-.angle-value.level-danger { color: var(--accent-pink); }
+.angle-value.level-ok {
+  color: var(--accent-green);
+}
+
+.angle-value.level-warn {
+  color: var(--accent-orange);
+}
+
+.angle-value.level-danger {
+  color: var(--accent-pink);
+}
 
 /* ============================
    レスポンシブ
    ============================ */
 @media (max-height: 700px) {
-  .level-container { max-width: 220px; }
-  .angle-value { font-size: 1.3rem; }
+  .level-container {
+    max-width: 220px;
+  }
+
+  .angle-value {
+    font-size: 1.3rem;
+  }
 }
 
 @media (min-width: 480px) {
-  .measurement-area { padding: 1.5rem; gap: 1.25rem; }
-  .level-container { max-width: 340px; }
+  .measurement-area {
+    padding: 1.5rem;
+    gap: 1.25rem;
+  }
+
+  .level-container {
+    max-width: 340px;
+  }
 }
 
 /* ============================
    キャリブレーションフラッシュ
    ============================ */
 @keyframes calibFlash {
-  0% { background: rgba(0, 255, 136, 0.2); }
-  100% { background: transparent; }
+  0% {
+    background: rgba(0, 255, 136, 0.2);
+  }
+
+  100% {
+    background: transparent;
+  }
 }
 
 .calibrated {
@@ -789,7 +867,65 @@ body {
   opacity: 0.5;
 }
 
+
 .locked .level-container {
   opacity: 0.6;
   filter: grayscale(0.5);
+}
+
+/* Recording Button */
+#recording-controls {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+}
+
+.record-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(20, 20, 20, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.record-icon {
+  color: #ff4444;
+  font-size: 24px;
+  transition: all 0.3s ease;
+}
+
+.record-button.recording {
+  border-color: #ff4444;
+  background: rgba(40, 10, 10, 0.9);
+}
+
+.record-button.recording .record-icon {
+  animation: recording-pulse 1.5s infinite;
+}
+
+@keyframes recording-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
