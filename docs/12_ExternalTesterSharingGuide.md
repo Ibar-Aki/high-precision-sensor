@@ -2,6 +2,7 @@
 
 - 作成日時: 2026-02-15 22:03:35 +09:00
 - 作成者: Codex＋GPT-5
+- 更新日: 2026-02-15
 
 ## 1. 目的
 
@@ -14,7 +15,8 @@
 - `npm test --silent` は全件成功（13 tests）。
 - `npm run test:e2e-smoke --silent` は全チェック成功。
 - Git ブランチは `main`。
-- Git remote は未設定です（GitHub公開には remote 設定が必要）。
+- GitHub remote 設定済み: `https://github.com/Ibar-Aki/high-precision-sensor.git`
+- `main` への push 完了（`88e2c72` / 2026-02-15 22:12:37 +09:00）。
 
 ## 3. 推奨公開方式
 
@@ -32,11 +34,11 @@
 
 ### 4.1 事前準備（ユーザー側）
 
-1. GitHubで空のリポジトリを作成します（例: `high-precision-sensor`）。
-2. 作成後の HTTPS URL を控えます。  
-   例: `https://github.com/<your-account>/high-precision-sensor.git`
+1. GitHubでリポジトリを用意します。  
+2. 本プロジェクトは以下に push 済みです。  
+   `https://github.com/Ibar-Aki/high-precision-sensor`
 
-### 4.2 ローカルから push（PowerShell）
+### 4.2 ローカルから push（PowerShell、以後の更新時）
 
 `C:\Users\AKIHIRO\.gemini\antigravity\High-precision-sensor` で以下を実行します。
 
@@ -44,12 +46,11 @@
 git status
 git add .
 git commit -m "Prepare external tester distribution"
-git remote add origin https://github.com/<your-account>/high-precision-sensor.git
 git push -u origin main
 ```
 
 補足:
-- すでに `origin` がある場合は `git remote set-url origin <URL>` を使います。
+- 既に `origin` 設定済みのため `git remote add origin ...` は不要です。
 - 認証は GitHub ログインまたは PAT（Personal Access Token）を使います。
 
 ### 4.3 Pages有効化（GitHub画面）
@@ -111,10 +112,9 @@ Safariバージョン:
 - テスター向け案内テンプレート作成
 - 回収フォーマット作成
 - 配布前のテスト確認結果の整理
+- GitHub `main` への push 実施
 
 ユーザー操作が必要:
-- GitHubリポジトリ作成
-- GitHub認証
 - Pages有効化（Web画面操作）
 
 ## 8. 短期テスト用（一時トンネル）
