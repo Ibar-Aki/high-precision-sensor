@@ -22,6 +22,10 @@ if (typeof global !== 'undefined') {
 }
 
 describe('SensorEngine', () => {
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
     it('初期状態は0であること', () => {
         const engine = new SensorEngine();
         expect(engine.pitch).toBe(0);
@@ -161,5 +165,27 @@ describe('SensorEngine', () => {
         // 入力 5.0 -> オフセット 5.0 -> 出力 0
         newEngine.process(5.0, 5.0);
         expect(newEngine.pitch).toBeCloseTo(0, 1);
+    });
+
+    it('不正なセンサー値は処理しないこと', () => {
+        const engine = new SensorEngine();
+
+        const ok = engine.process(NaN, 1);
+        expect(ok).toBe(false);
+        expect(engine.sampleCount).toBe(0);
+    });
+
+    it('ストレージ容量不足時に理由コードを返すこと', () => {
+        const engine = new SensorEngine();
+        const quotaError = new Error('quota');
+        quotaError.name = 'QuotaExceededError';
+        const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+            throw quotaError;
+        });
+
+        const result = engine.saveCalibration();
+        expect(result).toEqual({ ok: false, reason: 'quota_exceeded' });
+
+        setItemSpy.mockRestore();
     });
 });

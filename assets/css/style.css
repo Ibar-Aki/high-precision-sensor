@@ -25,8 +25,8 @@
   --grad-warm: linear-gradient(135deg, var(--accent-pink), var(--accent-orange));
 
   /* フォント */
-  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+  --font-ui: 'Segoe UI', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
 
   /* レイアウト */
   --safe-top: env(safe-area-inset-top, 0px);

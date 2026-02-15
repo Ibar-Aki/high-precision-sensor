@@ -2,6 +2,7 @@ import { SensorEngine } from './modules/SensorEngine.js';
 import { AudioEngine } from './modules/AudioEngine.js';
 import { UIManager } from './modules/UIManager.js';
 import { DataLogger } from './modules/DataLogger.js';
+import { SettingsManager } from './modules/SettingsManager.js';
 
 /**
  * メインアプリケーション
@@ -13,13 +14,30 @@ class App {
     this.audio = new AudioEngine();
     this.ui = new UIManager();
     this.logger = new DataLogger();
+    this.settingsManager = new SettingsManager();
 
     this.isRunning = false;
     this.animFrameId = null;
     this._orientationHandler = (e) => this._onOrientation(e);
+    this._toastEventHandler = (event) => {
+      const message = event?.detail?.message;
+      if (message) this._showToast(message);
+    };
 
-    // 設定
-    this.settings = this._loadSettings();
+    this._sensorLossDelayMs = 1000;
+    this._lastSensorEventAt = 0;
+    this._sensorLossNotified = false;
+
+    this._lastSettingsErrorToastAt = -Infinity;
+    this._settingsErrorToastIntervalMs = 3000;
+
+    const settingsResult = this.settingsManager.load();
+    this.settings = settingsResult.value ?? {};
+    if (!settingsResult.ok) {
+      this._showStorageErrorToast('設定の読み込み', settingsResult.reason);
+    }
+
+    window.addEventListener('app:toast', this._toastEventHandler);
 
     // イベントバインド
     this._bindEvents();
@@ -66,6 +84,8 @@ class App {
     document.getElementById('main-screen').classList.add('active');
 
     this.isRunning = true;
+    this._sensorLossNotified = false;
+    this._lastSensorEventAt = performance.now();
     this.ui.setStatus('active', '計測中');
     this.ui.els.sensorInfo.textContent = 'センサー: DeviceOrientation API (100Hz フィルタ済み)';
 
@@ -74,13 +94,19 @@ class App {
       this.ui.createRecordingButton(
         () => {
           this.logger.start();
-          this._showToast("REC Start");
+          this._showToast('REC Start');
         },
         () => {
           const filename = this.logger.exportCSV();
           this.logger.stop();
-          this.ui.showDownloadButton(filename);
-          this._showToast("CSV Saved");
+          if (filename) {
+            this.ui.showDownloadButton(filename);
+            this._showToast('CSV Saved');
+          }
+          const stats = this.logger.getStats();
+          if (stats.dropped > 0) {
+            this._showToast(`ログ上限到達: ${stats.dropped.toLocaleString()}件を削除しました`);
+          }
         }
       );
     }
@@ -97,17 +123,34 @@ class App {
     const beta = e.beta;  // ピッチ（前後: -180 〜 180）
     const gamma = e.gamma; // ロール（左右: -90 〜 90）
 
-    if (!Number.isFinite(beta) || !Number.isFinite(gamma)) return;
+    if (beta === null || gamma === null || !Number.isFinite(beta) || !Number.isFinite(gamma)) {
+      this._handleSensorLoss();
+      return;
+    }
 
-    this.sensor.process(beta, gamma);
+    this._lastSensorEventAt = performance.now();
+    this._handleSensorRecovery();
+
+    const processed = this.sensor.process(beta, gamma);
+    if (!processed) {
+      return;
+    }
   }
 
   _startRenderLoop() {
     let lastStatsUpdate = 0;
 
     const loop = (timestamp) => {
+      if (!this.isRunning) return;
+
+      if (timestamp - this._lastSensorEventAt > this._sensorLossDelayMs) {
+        this._handleSensorLoss();
+      }
+
       // データのロギング（録画中のみ）
-      this.logger.log(this.sensor.pitch, this.sensor.roll);
+      if (this.logger.isRecording) {
+        this.logger.log(this.sensor.pitch, this.sensor.roll);
+      }
 
       // 角度表示更新
       this.ui.updateAngles(
@@ -133,6 +176,23 @@ class App {
     };
 
     this.animFrameId = requestAnimationFrame(loop);
+  }
+
+  _handleSensorLoss() {
+    if (this._sensorLossNotified) return;
+    if (performance.now() - this._lastSensorEventAt < this._sensorLossDelayMs) return;
+
+    this._sensorLossNotified = true;
+    this.ui.setStatus('inactive', 'センサー信号待ち');
+    this._showToast('センサーデータを受信できません');
+  }
+
+  _handleSensorRecovery() {
+    if (!this._sensorLossNotified) return;
+
+    this._sensorLossNotified = false;
+    this.ui.setStatus('active', '計測中');
+    this._showToast('センサーデータ受信を再開しました');
   }
 
   /* ---------- イベントバインド ---------- */
@@ -164,12 +224,15 @@ class App {
 
     // キャリブレーション
     document.getElementById('btn-calibrate')?.addEventListener('click', () => {
-      this.sensor.calibrate();
+      const result = this.sensor.calibrate();
       document.querySelector('.measurement-area').classList.add('calibrated');
       setTimeout(() => {
         document.querySelector('.measurement-area').classList.remove('calibrated');
       }, 600);
       this._showToast('キャリブレーション完了');
+      if (result && !result.ok) {
+        this._showStorageErrorToast('キャリブレーション保存', result.reason);
+      }
     });
 
     // 統計リセット
@@ -240,7 +303,10 @@ class App {
     });
 
     // ページ離脱前に設定保存
-    window.addEventListener('beforeunload', () => this._saveSettings());
+    window.addEventListener('beforeunload', () => {
+      this._saveSettings();
+      this.destroy();
+    });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this._saveSettings();
     });
@@ -284,16 +350,15 @@ class App {
     }, 1500);
   }
 
-  /* ---------- 設定の永続化 ---------- */
-  _loadSettings() {
-    try {
-      const data = localStorage.getItem('tilt-sensor-settings');
-      return data ? JSON.parse(data) : {};
-    } catch {
-      return {};
+  _showStorageErrorToast(operation, reason) {
+    if (reason === 'quota_exceeded') {
+      this._showToast(`${operation}に失敗: ストレージ容量が不足しています`);
+      return;
     }
+    this._showToast(`${operation}に失敗: ストレージへアクセスできません`);
   }
 
+  /* ---------- 設定の永続化 ---------- */
   _saveSettings() {
     const s = {
       emaAlpha: this.sensor.emaAlpha,
@@ -307,9 +372,14 @@ class App {
       decimalPlaces: this.ui.decimalPlaces,
       levelSens: this.ui.levelSensitivity,
     };
-    try {
-      localStorage.setItem('tilt-sensor-settings', JSON.stringify(s));
-    } catch { /* ignore */ }
+    const result = this.settingsManager.save(s);
+    if (!result.ok) {
+      const now = performance.now();
+      if (now - this._lastSettingsErrorToastAt > this._settingsErrorToastIntervalMs) {
+        this._lastSettingsErrorToastAt = now;
+        this._showStorageErrorToast('設定の保存', result.reason);
+      }
+    }
   }
 
   _applySettings() {
@@ -367,7 +437,7 @@ class App {
       if (val) val.textContent = s.soundThreshold.toFixed(1);
     }
     if (s.masterVolume !== undefined) {
-      this.audio.masterVolume = s.masterVolume;
+      this.audio.setMasterVolume(s.masterVolume);
       const el = document.getElementById('master-volume');
       if (el) el.value = s.masterVolume;
       const val = document.getElementById('master-volume-val');
@@ -387,6 +457,18 @@ class App {
       const val = document.getElementById('level-sensitivity-val');
       if (val) val.textContent = s.levelSens;
     }
+  }
+
+  destroy() {
+    this.isRunning = false;
+    if (this.animFrameId !== null) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+    window.removeEventListener('deviceorientation', this._orientationHandler, true);
+    window.removeEventListener('app:toast', this._toastEventHandler);
+    this.audio.destroy?.();
+    clearTimeout(this._toastTimer);
   }
 }
 

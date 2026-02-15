@@ -176,10 +176,8 @@ export class UIManager {
     }
 
     statusToast(msg) {
-        // Appクラスの_showToast相当。Appからメソッドを渡してもらうか、ここで実装するか。
-        // 簡易的にalertを使うか、CustomEventを発火するか。
-        // ここではApp側でToastを出す方が統一感があるため、戻り値やコールバックで対応するのが理想。
-        // 面倒なのでコンソールログと、ボタンの点滅解除のみ責務とする。
-        console.log(msg);
+        window.dispatchEvent(new CustomEvent('app:toast', {
+            detail: { message: msg }
+        }));
     }
 }

@@ -3,12 +3,18 @@ export class DataLogger {
         this.logs = [];
         this.isRecording = false;
         this.startTime = 0;
+        this.lastLoggedAt = -Infinity;
+        this.dropped = 0;
+        this.sampleIntervalMs = 100; // 10Hz
+        this.maxRecords = 18000; // 30分相当 (10Hz)
     }
 
     start() {
         this.logs = [];
         this.isRecording = true;
         this.startTime = Date.now();
+        this.lastLoggedAt = -Infinity;
+        this.dropped = 0;
         console.log("Data logging started");
     }
 
@@ -18,14 +24,23 @@ export class DataLogger {
     }
 
     log(pitch, roll) {
-        if (!this.isRecording) return;
+        if (!this.isRecording) return false;
+        if (!Number.isFinite(pitch) || !Number.isFinite(roll)) return false;
 
         // 経過時間(ms)
         const time = Date.now() - this.startTime;
+        if (time - this.lastLoggedAt < this.sampleIntervalMs) {
+            return false;
+        }
+        this.lastLoggedAt = time;
 
-        // メモリ節約のため、配列の配列として保存
-        // [time, pitch, roll]
-        this.logs.push([time, pitch.toFixed(5), roll.toFixed(5)]);
+        // メモリ節約のため、数値のまま保持しCSV生成時に整形する
+        if (this.logs.length >= this.maxRecords) {
+            this.logs.shift();
+            this.dropped++;
+        }
+        this.logs.push([time, pitch, roll]);
+        return true;
     }
 
     exportCSV() {
@@ -39,7 +54,7 @@ export class DataLogger {
 
         // データ行
         this.logs.forEach(row => {
-            csvContent += `${row[0]},${row[1]},${row[2]}\n`;
+            csvContent += `${row[0]},${row[1].toFixed(5)},${row[2].toFixed(5)}\n`;
         });
 
         // Blob作成
@@ -61,5 +76,14 @@ export class DataLogger {
         document.body.removeChild(link);
 
         return filename;
+    }
+
+    getStats() {
+        const durationMs = this.logs.length > 0 ? this.logs[this.logs.length - 1][0] : 0;
+        return {
+            count: this.logs.length,
+            durationMs,
+            dropped: this.dropped
+        };
     }
 }

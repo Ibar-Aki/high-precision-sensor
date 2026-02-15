@@ -162,4 +162,22 @@ export class AudioEngine {
     setMode(mode) {
         this.mode = mode;
     }
+
+    destroy() {
+        if (!this._initialized) return;
+        for (const osc of Object.values(this.oscillators)) {
+            try {
+                osc.stop();
+            } catch {
+                // 既に停止済みの場合は無視
+            }
+        }
+        this.oscillators = {};
+        this.gains = {};
+        this.ctx?.close();
+        this.ctx = null;
+        this.masterGain = null;
+        this.panner = null;
+        this._initialized = false;
+    }
 }

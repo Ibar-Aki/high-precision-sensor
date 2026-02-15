@@ -3,12 +3,18 @@
  * オフラインキャッシュ（キャッシュファースト戦略）
  */
 
-const CACHE_NAME = 'tilt-sensor-v2';
+const CACHE_NAME = 'tilt-sensor-v3';
 const ASSETS = [
     './',
     './index.html',
     './assets/css/style.css',
     './assets/js/app.js',
+    './assets/js/modules/SensorEngine.js',
+    './assets/js/modules/AudioEngine.js',
+    './assets/js/modules/UIManager.js',
+    './assets/js/modules/DataLogger.js',
+    './assets/js/modules/KalmanFilter1D.js',
+    './assets/js/modules/SettingsManager.js',
     './assets/icons/icon-192.svg',
     './assets/icons/icon-512.svg',
     './manifest.json'
@@ -39,20 +45,6 @@ self.addEventListener('activate', (event) => {
 // フェッチ: キャッシュファースト → ネットワークフォールバック
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') {
-        return;
-    }
-
-    // Google Fonts などの外部リソースはネットワーク優先
-    if (!event.request.url.startsWith(self.location.origin)) {
-        event.respondWith(
-            fetch(event.request)
-                .then(response => {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                    return response;
-                })
-                .catch(() => caches.match(event.request))
-        );
         return;
     }
 

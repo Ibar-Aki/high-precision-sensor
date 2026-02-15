@@ -59,10 +59,13 @@ export class SensorEngine {
                     this.calibPitch = parsed.calibPitch;
                     this.calibRoll = parsed.calibRoll;
                     console.log('Calibration loaded:', parsed);
+                    return { ok: true, loaded: true };
                 }
             }
+            return { ok: true, loaded: false };
         } catch (e) {
             console.error('Failed to load calibration:', e);
+            return { ok: false, reason: this._storageErrorReason(e) };
         }
     }
 
@@ -77,8 +80,10 @@ export class SensorEngine {
             };
             localStorage.setItem('sensor_calibration_v1', JSON.stringify(data));
             console.log('Calibration saved:', data);
+            return { ok: true };
         } catch (e) {
             console.error('Failed to save calibration:', e);
+            return { ok: false, reason: this._storageErrorReason(e) };
         }
     }
 
@@ -88,7 +93,8 @@ export class SensorEngine {
      * @param {number} gamma Roll (左右傾斜)
      */
     process(beta, gamma) {
-        if (this.locked) return;
+        if (this.locked) return false;
+        if (!Number.isFinite(beta) || !Number.isFinite(gamma)) return false;
 
         this.rawPitch = beta;
         this.rawRoll = gamma;
@@ -143,6 +149,7 @@ export class SensorEngine {
         // 統計更新
         if (Math.abs(this.pitch) > Math.abs(this.maxPitch)) this.maxPitch = this.pitch;
         if (Math.abs(this.roll) > Math.abs(this.maxRoll)) this.maxRoll = this.roll;
+        return true;
     }
 
     calibrate() {
@@ -160,7 +167,7 @@ export class SensorEngine {
         this.calibRoll += this.roll;
 
         // 永続化
-        this.saveCalibration();
+        const saveResult = this.saveCalibration();
 
         // フィルタ状態をリセットして、新しいゼロ点から開始
         this.kfPitch.reset();
@@ -170,6 +177,7 @@ export class SensorEngine {
         this.roll = 0;
         this._prevPitch = 0;
         this._prevRoll = 0;
+        return saveResult;
     }
 
     resetStats() {
@@ -185,5 +193,12 @@ export class SensorEngine {
 
     getTotalAngle() {
         return Math.sqrt(this.pitch * this.pitch + this.roll * this.roll);
+    }
+
+    _storageErrorReason(error) {
+        if (error && error.name === 'QuotaExceededError') {
+            return 'quota_exceeded';
+        }
+        return 'storage_unavailable';
     }
 }
