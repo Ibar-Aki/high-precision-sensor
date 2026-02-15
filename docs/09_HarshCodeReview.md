@@ -260,3 +260,27 @@ if (this.logs.length >= this.maxRecords) {
 
 **辛口コメント**:
 「前回の“PWAとして成立していない”状態からは明確に脱却した。一方で、今のまま機能を積み増すと `app.js` が次のボトルネックになる。今は動くが、将来の変更コストは高い。**品質は回復したが、拡張性はまだ弱い**。」
+
+---
+
+## 8. 対応結果（2026-02-15）
+
+**更新日**: 2026-02-15
+
+### 完了（今回対応）
+
+- H1: `app.js` の責務分割（軽量）
+  - `ToastManager` / `LifecycleManager` / `AppEventBinder` を追加し、`App` を調停役中心へ整理。
+- H2: `DataLogger` のリングバッファ化
+  - `Array.shift()` を廃止し、上限到達時の追記を O(1) 化。
+- L1: 主要ボタンの `aria-label` 追加
+  - `btn-calibrate` / `btn-reset-stats` / `btn-lock` に明示ラベルを付与。
+- L2: `AudioEngine` のマジックナンバー定数化
+  - 周波数帯・ゲイン・閾値・ランプ時間を命名定数へ集約。
+
+### 今回見送り（別タスク）
+
+- M1: Service Worker プリキャッシュ一覧の自動生成化（Workbox等）
+- M2: `UIManager` / `AudioEngine` の単体テスト拡充
+- M3: manifest への PNG / maskable アイコン追加
+- L3: JSDoc / TypeScript 段階導入

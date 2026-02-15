@@ -2,6 +2,21 @@
  * 音声エンジン (Web Audio API)
  * 4方向のオシレーター制御とステレオパンニングを担当
  */
+const DEFAULT_OSC_FREQUENCY = 440;
+const AXIS_ACTIVE_THRESHOLD = 0.05;
+const PITCH_BASE_FREQUENCY = 220;
+const PITCH_FREQUENCY_RANGE = 660;
+const ROLL_BASE_FREQUENCY = 330;
+const ROLL_FREQUENCY_RANGE = 440;
+const PITCH_GAIN_SCALE = 0.3;
+const ROLL_GAIN_SCALE = 0.25;
+const MAX_TILT_ANGLE_FOR_AUDIO = 30;
+const PAN_DIVISOR = 15;
+const GAIN_RAMP_SECONDS = 0.05;
+const PAN_RAMP_SECONDS = 0.05;
+const SILENCE_RAMP_SECONDS = 0.05;
+const MASTER_VOLUME_RAMP_SECONDS = 0.02;
+
 export class AudioEngine {
     constructor() {
         this.ctx = null;
@@ -48,7 +63,7 @@ export class AudioEngine {
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.type = type;
-                osc.frequency.value = 440;
+                osc.frequency.value = DEFAULT_OSC_FREQUENCY;
                 gain.gain.value = 0;
                 osc.connect(gain);
                 gain.connect(this.panner);
@@ -86,55 +101,54 @@ export class AudioEngine {
         }
 
         const now = this.ctx.currentTime;
-        const ramp = 0.05; // 50ms ランプ
 
         // パン（左右）
         if (this.panner && this.panner.pan) {
-            const pan = Math.max(-1, Math.min(1, roll / 15));
-            this.panner.pan.setTargetAtTime(pan, now, 0.05);
+            const pan = Math.max(-1, Math.min(1, roll / PAN_DIVISOR));
+            this.panner.pan.setTargetAtTime(pan, now, PAN_RAMP_SECONDS);
         }
 
-        // 各方向の音量とピッチ計算
-        const maxAngle = 30; // 最大参照角度
+        // 各方向の音量と周波数を傾き量から算出する
+        const maxAngle = MAX_TILT_ANGLE_FOR_AUDIO;
 
         // 前方向
-        if (pitch < -0.05) {
+        if (pitch < -AXIS_ACTIVE_THRESHOLD) {
             const intensity = Math.min(absPitch / maxAngle, 1);
-            const freq = 220 + intensity * 660; // 220Hz ~ 880Hz
-            this.oscillators.front.frequency.setTargetAtTime(freq, now, ramp);
-            this.gains.front.gain.setTargetAtTime(intensity * 0.3, now, ramp);
+            const freq = PITCH_BASE_FREQUENCY + intensity * PITCH_FREQUENCY_RANGE;
+            this.oscillators.front.frequency.setTargetAtTime(freq, now, GAIN_RAMP_SECONDS);
+            this.gains.front.gain.setTargetAtTime(intensity * PITCH_GAIN_SCALE, now, GAIN_RAMP_SECONDS);
         } else {
-            this.gains.front.gain.setTargetAtTime(0, now, ramp);
+            this.gains.front.gain.setTargetAtTime(0, now, GAIN_RAMP_SECONDS);
         }
 
         // 後方向
-        if (pitch > 0.05) {
+        if (pitch > AXIS_ACTIVE_THRESHOLD) {
             const intensity = Math.min(absPitch / maxAngle, 1);
-            const freq = 220 + intensity * 660;
-            this.oscillators.back.frequency.setTargetAtTime(freq, now, ramp);
-            this.gains.back.gain.setTargetAtTime(intensity * 0.3, now, ramp);
+            const freq = PITCH_BASE_FREQUENCY + intensity * PITCH_FREQUENCY_RANGE;
+            this.oscillators.back.frequency.setTargetAtTime(freq, now, GAIN_RAMP_SECONDS);
+            this.gains.back.gain.setTargetAtTime(intensity * PITCH_GAIN_SCALE, now, GAIN_RAMP_SECONDS);
         } else {
-            this.gains.back.gain.setTargetAtTime(0, now, ramp);
+            this.gains.back.gain.setTargetAtTime(0, now, GAIN_RAMP_SECONDS);
         }
 
         // 左方向
-        if (roll < -0.05) {
+        if (roll < -AXIS_ACTIVE_THRESHOLD) {
             const intensity = Math.min(absRoll / maxAngle, 1);
-            const freq = 330 + intensity * 440;
-            this.oscillators.left.frequency.setTargetAtTime(freq, now, ramp);
-            this.gains.left.gain.setTargetAtTime(intensity * 0.25, now, ramp);
+            const freq = ROLL_BASE_FREQUENCY + intensity * ROLL_FREQUENCY_RANGE;
+            this.oscillators.left.frequency.setTargetAtTime(freq, now, GAIN_RAMP_SECONDS);
+            this.gains.left.gain.setTargetAtTime(intensity * ROLL_GAIN_SCALE, now, GAIN_RAMP_SECONDS);
         } else {
-            this.gains.left.gain.setTargetAtTime(0, now, ramp);
+            this.gains.left.gain.setTargetAtTime(0, now, GAIN_RAMP_SECONDS);
         }
 
         // 右方向
-        if (roll > 0.05) {
+        if (roll > AXIS_ACTIVE_THRESHOLD) {
             const intensity = Math.min(absRoll / maxAngle, 1);
-            const freq = 330 + intensity * 440;
-            this.oscillators.right.frequency.setTargetAtTime(freq, now, ramp);
-            this.gains.right.gain.setTargetAtTime(intensity * 0.25, now, ramp);
+            const freq = ROLL_BASE_FREQUENCY + intensity * ROLL_FREQUENCY_RANGE;
+            this.oscillators.right.frequency.setTargetAtTime(freq, now, GAIN_RAMP_SECONDS);
+            this.gains.right.gain.setTargetAtTime(intensity * ROLL_GAIN_SCALE, now, GAIN_RAMP_SECONDS);
         } else {
-            this.gains.right.gain.setTargetAtTime(0, now, ramp);
+            this.gains.right.gain.setTargetAtTime(0, now, GAIN_RAMP_SECONDS);
         }
     }
 
@@ -142,14 +156,14 @@ export class AudioEngine {
         if (!this._initialized) return;
         const now = this.ctx.currentTime;
         for (const g of Object.values(this.gains)) {
-            g.gain.setTargetAtTime(0, now, 0.05);
+            g.gain.setTargetAtTime(0, now, SILENCE_RAMP_SECONDS);
         }
     }
 
     setMasterVolume(v) {
         this.masterVolume = v;
         if (this.masterGain) {
-            this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+            this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, MASTER_VOLUME_RAMP_SECONDS);
         }
     }
 

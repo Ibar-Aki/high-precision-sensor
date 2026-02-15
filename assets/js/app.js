@@ -3,6 +3,9 @@ import { AudioEngine } from './modules/AudioEngine.js';
 import { UIManager } from './modules/UIManager.js';
 import { DataLogger } from './modules/DataLogger.js';
 import { SettingsManager } from './modules/SettingsManager.js';
+import { ToastManager } from './modules/ToastManager.js';
+import { LifecycleManager } from './modules/LifecycleManager.js';
+import { AppEventBinder } from './modules/AppEventBinder.js';
 
 /**
  * メインアプリケーション
@@ -15,6 +18,7 @@ class App {
     this.ui = new UIManager();
     this.logger = new DataLogger();
     this.settingsManager = new SettingsManager();
+    this.toastManager = new ToastManager();
 
     this.isRunning = false;
     this.animFrameId = null;
@@ -39,8 +43,27 @@ class App {
 
     window.addEventListener('app:toast', this._toastEventHandler);
 
-    // イベントバインド
-    this._bindEvents();
+    this.eventBinder = new AppEventBinder({
+      sensor: this.sensor,
+      audio: this.audio,
+      ui: this.ui,
+      onStart: () => this.start(),
+      onSaveSettings: () => this._saveSettings(),
+      onToast: (message) => this._showToast(message),
+      onStorageError: (operation, reason) => this._showStorageErrorToast(operation, reason)
+    });
+    this.eventBinder.bind();
+
+    this.lifecycleManager = new LifecycleManager({
+      onBeforeUnload: () => {
+        this._saveSettings();
+        this.destroy();
+      },
+      onHidden: () => {
+        this._saveSettings();
+      }
+    });
+    this.lifecycleManager.bind();
 
     // 初期設定適用（バインド後に行うことでスライダー等のUIにも反映）
     this._applySettings();
@@ -195,167 +218,13 @@ class App {
     this._showToast('センサーデータ受信を再開しました');
   }
 
-  /* ---------- イベントバインド ---------- */
-  _bindEvents() {
-    // スタートボタン
-    const btnStart = document.getElementById('btn-start');
-    if (btnStart) btnStart.addEventListener('click', () => this.start());
-
-    // サウンドトグル
-    const btnSoundToggle = document.getElementById('btn-sound-toggle');
-    if (btnSoundToggle) {
-      btnSoundToggle.addEventListener('click', (e) => {
-        const on = this.audio.toggle();
-        e.currentTarget.classList.toggle('active', on);
-        this._saveSettings();
-      });
-    }
-
-    // 設定パネル開閉
-    document.getElementById('btn-settings')?.addEventListener('click', () => {
-      document.getElementById('settings-panel').classList.add('open');
-    });
-    document.getElementById('btn-close-settings')?.addEventListener('click', () => {
-      document.getElementById('settings-panel').classList.remove('open');
-    });
-    document.getElementById('settings-overlay')?.addEventListener('click', () => {
-      document.getElementById('settings-panel').classList.remove('open');
-    });
-
-    // キャリブレーション
-    document.getElementById('btn-calibrate')?.addEventListener('click', () => {
-      const result = this.sensor.calibrate();
-      document.querySelector('.measurement-area').classList.add('calibrated');
-      setTimeout(() => {
-        document.querySelector('.measurement-area').classList.remove('calibrated');
-      }, 600);
-      this._showToast('キャリブレーション完了');
-      if (result && !result.ok) {
-        this._showStorageErrorToast('キャリブレーション保存', result.reason);
-      }
-    });
-
-    // 統計リセット
-    document.getElementById('btn-reset-stats')?.addEventListener('click', () => {
-      this.sensor.resetStats();
-      this._showToast('統計リセット');
-    });
-
-    // 値ロック
-    document.getElementById('btn-lock')?.addEventListener('click', (e) => {
-      this.sensor.locked = !this.sensor.locked;
-      e.currentTarget.classList.toggle('active', this.sensor.locked);
-      document.querySelector('.measurement-area').classList.toggle('locked', this.sensor.locked);
-
-      const svg = e.currentTarget.querySelector('.btn-svg');
-      if (svg) svg.style.fill = this.sensor.locked ? 'var(--accent-cyan)' : '';
-
-      this._showToast(this.sensor.locked ? '値ロック中' : 'ロック解除');
-    });
-
-    // スライダー群
-    this._bindSlider('filter-alpha', (v) => {
-      this.sensor.emaAlpha = v;
-      document.getElementById('filter-alpha-val').textContent = v.toFixed(2);
-    });
-    this._bindSlider('kalman-q', (v) => {
-      this.sensor.setKalmanParams(v, this.sensor.kfPitch.r);
-      document.getElementById('kalman-q-val').textContent = v.toFixed(4);
-    });
-    this._bindSlider('kalman-r', (v) => {
-      this.sensor.setKalmanParams(this.sensor.kfPitch.q, v);
-      document.getElementById('kalman-r-val').textContent = v.toFixed(2);
-    });
-    this._bindSlider('deadzone', (v) => {
-      this.sensor.deadzone = v;
-      document.getElementById('deadzone-val').textContent = v.toFixed(3);
-    });
-    this._bindSlider('sound-threshold', (v) => {
-      this.audio.threshold = v;
-      document.getElementById('sound-threshold-val').textContent = v.toFixed(1);
-    });
-    this._bindSlider('master-volume', (v) => {
-      this.audio.setMasterVolume(v);
-      document.getElementById('master-volume-val').textContent = Math.round(v * 100) + '%';
-    });
-    this._bindSlider('decimal-places', (v) => {
-      this.ui.decimalPlaces = Math.round(v);
-      document.getElementById('decimal-places-val').textContent = Math.round(v);
-    });
-    this._bindSlider('level-sensitivity', (v) => {
-      this.ui.levelSensitivity = v;
-      document.getElementById('level-sensitivity-val').textContent = Math.round(v);
-    });
-
-    // 音声モード切替
-    document.querySelectorAll('[data-sound-mode]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-sound-mode]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const mode = btn.dataset.soundMode;
-        this.audio.setMode(mode);
-        const thresholdSetting = document.getElementById('threshold-setting');
-        if (thresholdSetting) {
-          thresholdSetting.style.display = mode === 'threshold' ? 'block' : 'none';
-        }
-        this._saveSettings();
-      });
-    });
-
-    // ページ離脱前に設定保存
-    window.addEventListener('beforeunload', () => {
-      this._saveSettings();
-      this.destroy();
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this._saveSettings();
-    });
-  }
-
-  _bindSlider(id, callback) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const handler = () => {
-      callback(parseFloat(el.value));
-      this._saveSettings();
-    };
-    el.addEventListener('input', handler);
-  }
-
   /* ---------- トースト通知 ---------- */
   _showToast(msg) {
-    let toast = document.getElementById('toast');
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'toast';
-      toast.style.cssText = `
-        position: fixed; bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
-        left: 50%; transform: translateX(-50%) translateY(20px);
-        padding: 0.6rem 1.2rem; border-radius: 12px;
-        background: rgba(0,212,255,0.15); border: 1px solid rgba(0,212,255,0.3);
-        color: #00d4ff; font-size: 0.8rem; font-weight: 600;
-        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-        opacity: 0; transition: opacity 0.3s, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-        z-index: 200; pointer-events: none;
-      `;
-      document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateX(-50%) translateY(0)';
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(-50%) translateY(20px)';
-    }, 1500);
+    this.toastManager.show(msg);
   }
 
   _showStorageErrorToast(operation, reason) {
-    if (reason === 'quota_exceeded') {
-      this._showToast(`${operation}に失敗: ストレージ容量が不足しています`);
-      return;
-    }
-    this._showToast(`${operation}に失敗: ストレージへアクセスできません`);
+    this.toastManager.showStorageError(operation, reason);
   }
 
   /* ---------- 設定の永続化 ---------- */
@@ -467,8 +336,10 @@ class App {
     }
     window.removeEventListener('deviceorientation', this._orientationHandler, true);
     window.removeEventListener('app:toast', this._toastEventHandler);
+    this.eventBinder?.destroy();
+    this.lifecycleManager?.destroy();
     this.audio.destroy?.();
-    clearTimeout(this._toastTimer);
+    this.toastManager.destroy();
   }
 }
 

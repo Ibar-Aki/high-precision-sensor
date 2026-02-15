@@ -1,16 +1,24 @@
 export class DataLogger {
     constructor() {
-        this.logs = [];
         this.isRecording = false;
         this.startTime = 0;
         this.lastLoggedAt = -Infinity;
         this.dropped = 0;
         this.sampleIntervalMs = 100; // 10Hz
         this.maxRecords = 18000; // 30分相当 (10Hz)
+        this._buffer = [];
+        this._head = 0;
+        this._count = 0;
+    }
+
+    get logs() {
+        return this._toOrderedArray();
     }
 
     start() {
-        this.logs = [];
+        this._buffer = new Array(this.maxRecords);
+        this._head = 0;
+        this._count = 0;
         this.isRecording = true;
         this.startTime = Date.now();
         this.lastLoggedAt = -Infinity;
@@ -20,7 +28,7 @@ export class DataLogger {
 
     stop() {
         this.isRecording = false;
-        console.log(`Data logging stopped. Total records: ${this.logs.length}`);
+        console.log(`Data logging stopped. Total records: ${this._count}`);
     }
 
     log(pitch, roll) {
@@ -35,16 +43,27 @@ export class DataLogger {
         this.lastLoggedAt = time;
 
         // メモリ節約のため、数値のまま保持しCSV生成時に整形する
-        if (this.logs.length >= this.maxRecords) {
-            this.logs.shift();
+        if (this.maxRecords <= 0) {
+            this.dropped++;
+            return false;
+        }
+
+        let index = 0;
+        if (this._count < this.maxRecords) {
+            index = (this._head + this._count) % this.maxRecords;
+            this._count++;
+        } else {
+            index = this._head;
+            this._head = (this._head + 1) % this.maxRecords;
             this.dropped++;
         }
-        this.logs.push([time, pitch, roll]);
+
+        this._buffer[index] = [time, pitch, roll];
         return true;
     }
 
     exportCSV() {
-        if (this.logs.length === 0) {
+        if (this._count === 0) {
             alert("No data to export");
             return;
         }
@@ -53,7 +72,7 @@ export class DataLogger {
         let csvContent = "Time(ms),Pitch(deg),Roll(deg)\n";
 
         // データ行
-        this.logs.forEach(row => {
+        this._forEachLog(row => {
             csvContent += `${row[0]},${row[1].toFixed(5)},${row[2].toFixed(5)}\n`;
         });
 
@@ -79,11 +98,33 @@ export class DataLogger {
     }
 
     getStats() {
-        const durationMs = this.logs.length > 0 ? this.logs[this.logs.length - 1][0] : 0;
+        const latest = this._getLatestRecord();
+        const durationMs = latest ? latest[0] : 0;
         return {
-            count: this.logs.length,
+            count: this._count,
             durationMs,
             dropped: this.dropped
         };
+    }
+
+    _forEachLog(callback) {
+        for (let i = 0; i < this._count; i++) {
+            const index = (this._head + i) % this.maxRecords;
+            callback(this._buffer[index], i);
+        }
+    }
+
+    _toOrderedArray() {
+        const ordered = new Array(this._count);
+        this._forEachLog((row, i) => {
+            ordered[i] = row;
+        });
+        return ordered;
+    }
+
+    _getLatestRecord() {
+        if (this._count === 0) return null;
+        const index = (this._head + this._count - 1) % this.maxRecords;
+        return this._buffer[index];
     }
 }
