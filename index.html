@@ -218,6 +218,14 @@
           </svg>
           値ロック
         </button>
+        <button id="btn-calibrate-2pt" class="btn-action btn-action-wide glass-card-sm"
+          aria-label="2点キャリブレーションを開始または完了する">
+          <svg viewBox="0 0 24 24" class="btn-svg">
+            <path
+              d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-2.34-5.66L14 10h8V2l-2.84 2.84A9.96 9.96 0 0 0 12 2zm-1 6h2v5h-2V8zm0 7h2v2h-2v-2z" />
+          </svg>
+          2点校正
+        </button>
       </div>
     </main>
 
@@ -268,6 +276,31 @@
                 <input type="range" id="deadzone" min="0" max="0.1" step="0.001" value="0.005" class="slider">
                 <span id="deadzone-val" class="slider-val">0.005</span>
               </div>
+            </div>
+            <div class="setting-item">
+              <label for="static-variance-threshold">静止判定閾値（分散）</label>
+              <div class="slider-row">
+                <input type="range" id="static-variance-threshold" min="0.0001" max="0.02" step="0.0001" value="0.002"
+                  class="slider">
+                <span id="static-variance-threshold-val" class="slider-val">0.0020</span>
+              </div>
+              <p class="setting-hint">小さいほど厳密（誤ロック減）、大きいほどロックしやすい</p>
+            </div>
+            <div class="setting-item">
+              <label for="static-duration-frame">静止判定フレーム数</label>
+              <div class="slider-row">
+                <input type="range" id="static-duration-frame" min="10" max="120" step="1" value="30" class="slider">
+                <span id="static-duration-frame-val" class="slider-val">30</span>
+              </div>
+              <p class="setting-hint">値を上げるほど誤ロックは減るが、確定まで遅くなる</p>
+            </div>
+            <div class="setting-item">
+              <label for="averaging-sample-count">静止平均サンプル数</label>
+              <div class="slider-row">
+                <input type="range" id="averaging-sample-count" min="10" max="300" step="1" value="60" class="slider">
+                <span id="averaging-sample-count-val" class="slider-val">60</span>
+              </div>
+              <p class="setting-hint">値を上げるほど高精度だが、MEASURING到達が遅くなる</p>
             </div>
           </div>
 

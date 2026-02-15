@@ -1,9 +1,10 @@
 # 高精度傾斜角センサー 技術解説書
-更新日: 2026-02-13
+
+更新日: 2026-02-16
 
 ## 1. 本書の目的
 
-本書は、傾斜角推定アルゴリズムの理論的背景および実装上の意図を明確化し、保守・改修時の技術判断基準を提供することを目的とする。
+本書は、傾斜角推定アルゴリズムの理論的背景および実装上の意図を明確化し、保守・改修時の技術判断基準を提供する。
 
 ## 2. 観測モデル
 
@@ -13,11 +14,12 @@ DeviceOrientation API から取得される観測値を \( y_t \)、真値を \(
 y_t = x_t + v_t
 \]
 
-本実装では、観測値から真値を推定するため、以下の3段処理を直列適用する。
+本実装では、観測値から真値を推定するため、以下の処理を直列適用する。
 
 1. 1次元カルマンフィルタ
 2. 指数移動平均（EMA）
 3. デッドゾーン処理
+4. **静止平均積算（Static Average）** ← ハイブリッドモードで動的に適用
 
 ## 3. 1次元カルマンフィルタ
 
@@ -86,16 +88,91 @@ s_t, & |s_t - o_{t-1}| \ge \theta
 
 本実装の既定値は \( \theta = 0.005 \) である。これにより、静止時の微小揺らぎを表示上で抑制する。
 
-## 6. パイプライン全体
+## 6. 静止平均積算（Static Average / Hybrid Mode）
+
+### 6.1 概要
+
+建設現場での机水平調整など、「完全に静止した状態で高精度計測を行う」ユースケースに対応するため、ハイブリッドモードを導入する。システムはセンサー値の分散を常時監視し、以下の2モードを自動切替する。
+
+| モード | 状態 | アルゴリズム |
+| :--- | :--- | :--- |
+| **Active Mode** | 調整中・移動中 | Kalman + EMA + Deadzone（従来方式） |
+| **Static Mode** | 完全静止中 | 蓄積バッファの全平均（真値に収束） |
+
+### 6.2 静止判定
+
+直近 $N$ フレームの分散を計算し、閾値以下であれば「静止」と判定する。
+
+- **静止判定閾値**: `staticVarianceThreshold`（デフォルト: 0.002、現場で要調整）
+- **判定期間**: `staticDurationFrame`（デフォルト: 30フレーム / 約0.5秒）
+
+### 6.3 平均化処理
+
+静止と判定された時点で蓄積バッファをリセットし、以降のカルマンフィルタ通過後の値を蓄積する。サンプル数 $n$ が増えるほど、ノイズ成分は $\frac{1}{\sqrt{n}}$ で減衰し、真値に収束する。
+
+### 6.4 実装モードとUI表示
+
+実装では下記3状態を持つ。
+
+| 状態 | 条件 | UIステータス表示 |
+| :--- | :--- | :--- |
+| `active` | 静止判定未成立 | `計測中` |
+| `locking` | 静止判定成立後、`averagingSampleCount` 未満 | `LOCKING...` |
+| `measuring` | 静止判定成立後、`averagingSampleCount` 以上 | `MEASURING` |
+
+`measuring` 中は表示小数桁を通常より1桁増やし、最終読取時の分解能を高める。
+
+### 6.5 追加パラメータ
+
+- `averagingSampleCount`: `60`
+- `staticDurationFrame`: `30`
+- `staticVarianceThreshold`: `0.002`
+- `maxBufferSize`: `2000`
+
+## 7. パイプライン全体
 
 \[
-\text{Raw} \rightarrow \text{Kalman} \rightarrow \text{EMA} \rightarrow \text{Deadzone} \rightarrow \text{Output}
+\text{Raw} \rightarrow \text{Calibration} \rightarrow \text{Kalman} \rightarrow \text{EMA} \rightarrow \text{Deadzone} \rightarrow \text{Output}
 \]
 
-上記処理を継続適用することで、観測値の過度なばらつきを抑え、実用上有効な安定表示を実現する。
+上記に加え、静止判定が成立した場合は以下のパスに切り替わる。
 
-## 7. 運用上の留意事項
+\[
+\text{Raw} \rightarrow \text{Calibration} \rightarrow \text{Kalman} \rightarrow \text{Static Average Buffer} \rightarrow \text{Output}
+\]
+
+## 8. 運用上の留意事項
 
 - 絶対精度は端末個体差および設置条件に依存する。
 - 高精度運用時は、計測対象面でのキャリブレーション実施を前提とする。
 - 設定値変更時は、応答性と安定性のトレードオフを考慮して調整する。
+- 建設現場等の振動環境では、静止判定閾値を現場のベースライン振動に合わせて調整する必要がある。
+
+## 9. 2点キャリブレーション
+
+### 9.1 概要
+
+1点校正に加え、同一面で iPhone を表向きのまま 180 度回転して2点取得し、センサーオフセットを推定する。
+
+### 9.2 補正式
+
+1点目観測値を `m1`、2点目観測値を `m2`、真値を `t`、オフセットを `b` とすると:
+
+- `m1 = t + b`
+- `m2 = -t + b`
+
+よって `b = (m1 + m2) / 2`。
+
+Pitch/Rollそれぞれで上式を適用し、`calibPitch`, `calibRoll` に加算する。
+
+### 9.3 取得条件
+
+- 取得は `measurementMode` が `locking` または `measuring` のときのみ許可する。
+- 1点目取得後は 30 秒以内に2点目を取得する。超過時は `timeout` として破棄する。
+
+### 9.4 公開インターフェース
+
+- `startTwoPointCalibration()`
+- `captureTwoPointCalibrationPoint()`
+- `cancelTwoPointCalibration()`
+- `getTwoPointCalibrationState()`

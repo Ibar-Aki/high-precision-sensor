@@ -1,70 +1,81 @@
-# 高精度傾斜角センサー PWA 運用手順書
-更新日: 2026-02-13
+# 高精度傾斜角センサー 開発ガイド
+更新日: 2026-02-16
 
 ## 1. 文書概要
 
-本書は、本アプリケーションの構成、技術要素、導入手順および確認手順を、運用担当者向けに整理したものである。
+本書は、開発者向けに本アプリの主要モジュール、静止平均ハイブリッドアルゴリズム、検証手順を整理したガイドである。
 
-## 2. 構成ファイル
+## 2. 主要構成
 
-| ファイル | 役割 |
+| パス | 役割 |
 |------|------|
-| `index.html` | 画面構成および主要 UI 定義 |
-| `style.css` | 画面スタイル、状態表現、レスポンシブ制御 |
-| `app.js` | センサー演算、音声制御、UI 更新、設定保存 |
-| `manifest.json` | PWA マニフェスト情報 |
-| `sw.js` | オフラインキャッシュ制御 |
-| `icons/` | アプリケーションアイコン（SVG） |
+| `index.html` | 画面構成と設定パネル定義 |
+| `assets/css/style.css` | UI状態表示、レスポンシブスタイル |
+| `assets/js/app.js` | アプリ統合、設定保存復元、状態表示制御 |
+| `assets/js/modules/SensorEngine.js` | Kalman/EMA/Deadzone + Static Average 本体 |
+| `assets/js/modules/AppEventBinder.js` | UIイベントとセンサーパラメータの接続 |
+| `assets/js/modules/UIManager.js` | 数値表示、ステータス更新、描画 |
+| `tests/*.test.js` | ユニットテスト |
+| `tests/e2e-offline-smoke.mjs` | オフライン起動と主要動作のE2Eスモーク |
 
-## 3. 技術構成
+## 3. ハイブリッド処理フロー
 
 ```mermaid
 graph TD
-  A[DeviceOrientation API] --> B[SensorEngine]
-  B --> C[Kalman Filter]
-  B --> D[EMA]
-  B --> E[Deadzone]
-  B --> F[UIManager]
-  B --> G[AudioEngine]
+  A[DeviceOrientation API] --> B[SensorEngine.process]
+  B --> C[Calibration]
+  C --> D[Kalman]
+  D --> E{Static判定}
+  E -->|No| F[EMA + Deadzone]
+  E -->|Yes| G[Static Average Buffer]
+  F --> H[UIManager / AudioEngine]
+  G --> H
 ```
 
-## 4. 機能一覧
+## 4. モード定義
 
-- 2軸傾斜角のリアルタイム表示
-- カルマンフィルタ・EMA・デッドゾーンによる安定化処理
-- 前後左右方向を識別する音声フィードバック
-- キャリブレーション機能
-- 設定値のローカル永続化
-- PWA インストール対応
+| mode | 意味 | 画面表示 |
+|------|------|------|
+| `active` | 通常追従モード | `計測中` |
+| `locking` | 静止判定後、平均化途中 | `LOCKING...` |
+| `measuring` | 必要サンプル到達後 | `MEASURING` |
 
-## 5. 導入手順
+## 5. 調整可能パラメータ
 
-### 5.1 GitHub Pages で公開する場合
+| 設定キー | UI要素ID | 既定値 |
+|------|------|------|
+| `emaAlpha` | `filter-alpha` | `0.08` |
+| `deadzone` | `deadzone` | `0.005` |
+| `staticVarianceThreshold` | `static-variance-threshold` | `0.002` |
+| `staticDurationFrame` | `static-duration-frame` | `30` |
+| `averagingSampleCount` | `averaging-sample-count` | `60` |
 
-```bash
-cd c:\Users\AKIHIRO\.gemini\antigravity\High-precision-sensor
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/<ユーザー名>/High-precision-sensor.git
-git push -u origin main
-```
+## 6. ローカル検証
 
-公開後、`https://<ユーザー名>.github.io/High-precision-sensor/` にアクセスする。
-
-### 5.2 ローカル検証を行う場合
-
-同一ネットワーク上の iPhone からローカルサーバー URL へアクセスする。なお、HTTP 環境では Service Worker が有効化されないため、PWA 機能確認は HTTPS 環境で実施すること。
-
-## 6. iPhone でのインストール手順
-
-1. Safari で公開 URL を開く。
-2. 共有メニューから「ホーム画面に追加」を選択する。
-3. 追加後、ホーム画面上のアイコンから起動する。
+1. ユニットテスト: `npm test -- --run`
+2. E2Eスモーク: `npm run test:e2e-smoke`
+3. 手動確認:
+   - センサー入力継続時に `LOCKING...` / `MEASURING` へ遷移すること
+   - 入力停止時に `センサー信号待ち` へ遷移すること
+   - 再入力で状態復帰すること
 
 ## 7. 関連資料
 
-- `docs/Accuracy_Estimation_Report.md`
-- `docs/Technical_Logic_Explanation.md`
-- `docs/implementation_plan.md`
-- `docs/task.md`
+- `docs/02_TechnicalSpec.md`
+- `docs/06_Proposal_Hybrid_Static_Average.md`
+- `docs/07_Optimization_and_Verification_Plan.md`
+- `docs/13_TwoPointCalibration_Design.md`
+
+## 8. 2点キャリブレーション実装メモ
+
+- 追加UI:
+  - `#btn-calibrate-2pt`（専用ボタン）
+- `SensorEngine` 追加API:
+  - `startTwoPointCalibration()`
+  - `captureTwoPointCalibrationPoint()`
+  - `cancelTwoPointCalibration()`
+  - `getTwoPointCalibrationState()`
+- 取得条件:
+  - `measurementMode` が `locking` / `measuring` のみ取得許可
+- タイムアウト:
+  - 1点目取得後 `30000ms`

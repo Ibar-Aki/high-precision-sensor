@@ -27,8 +27,8 @@ export class UIManager {
         this.levelSensitivity = 10; // °
     }
 
-    updateAngles(pitch, roll, total) {
-        const dp = this.decimalPlaces;
+    updateAngles(pitch, roll, total, dpOverride = null) {
+        const dp = dpOverride ?? this.decimalPlaces;
 
         // デジタル値
         this.els.pitchValue.textContent = Math.abs(pitch).toFixed(dp);

@@ -32,14 +32,46 @@ export class AppEventBinder {
 
         this._addListener(document.getElementById('btn-calibrate'), 'click', () => {
             const result = this.sensor.calibrate();
-            const measurementArea = document.querySelector('.measurement-area');
-            measurementArea?.classList.add('calibrated');
-            setTimeout(() => {
-                measurementArea?.classList.remove('calibrated');
-            }, 600);
+            this._flashCalibrated();
             this.onToast?.('キャリブレーション完了');
             if (result && !result.ok) {
                 this.onStorageError?.('キャリブレーション保存', result.reason);
+            }
+        });
+
+        this._addListener(document.getElementById('btn-calibrate-2pt'), 'click', () => {
+            const state = this.sensor.getTwoPointCalibrationState();
+            if (state.step === 'idle') {
+                this.sensor.startTwoPointCalibration();
+            }
+
+            const result = this.sensor.captureTwoPointCalibrationPoint();
+            if (result.done) {
+                this._flashCalibrated();
+                this.onToast?.('2点キャリブレーション完了');
+                if (!result.ok) {
+                    this.onStorageError?.('2点キャリブレーション保存', result.reason);
+                }
+                return;
+            }
+
+            if (!result.ok) {
+                if (result.reason === 'not_stable') {
+                    this.onToast?.('静止状態で実行してください（LOCKING...またはMEASURING）');
+                    return;
+                }
+                if (result.reason === 'timeout') {
+                    this.onToast?.('2点キャリブレーションがタイムアウトしました。最初からやり直してください');
+                    return;
+                }
+                this.onToast?.('2点キャリブレーションを開始できませんでした');
+                return;
+            }
+
+            this._flashCalibrated();
+            if (result.step === 'awaiting_second') {
+                this.onToast?.('2点校正 1/2 完了。iPhoneを表向きのまま180度回転して再度押してください');
+                return;
             }
         });
 
@@ -74,6 +106,22 @@ export class AppEventBinder {
         this._bindSlider('deadzone', (v) => {
             this.sensor.deadzone = v;
             document.getElementById('deadzone-val').textContent = v.toFixed(3);
+        });
+        this._bindSlider('static-variance-threshold', (v) => {
+            this.sensor.staticVarianceThreshold = v;
+            document.getElementById('static-variance-threshold-val').textContent = v.toFixed(4);
+        });
+        this._bindSlider('static-duration-frame', (v) => {
+            const frame = Math.max(1, Math.round(v));
+            this.sensor.staticDurationFrame = frame;
+            document.getElementById('static-duration-frame').value = String(frame);
+            document.getElementById('static-duration-frame-val').textContent = frame;
+        });
+        this._bindSlider('averaging-sample-count', (v) => {
+            const count = Math.max(1, Math.round(v));
+            this.sensor.averagingSampleCount = count;
+            document.getElementById('averaging-sample-count').value = String(count);
+            document.getElementById('averaging-sample-count-val').textContent = count;
         });
         this._bindSlider('sound-threshold', (v) => {
             this.audio.threshold = v;
@@ -121,6 +169,14 @@ export class AppEventBinder {
             callback(parseFloat(el.value));
             this.onSaveSettings?.();
         });
+    }
+
+    _flashCalibrated() {
+        const measurementArea = document.querySelector('.measurement-area');
+        measurementArea?.classList.add('calibrated');
+        setTimeout(() => {
+            measurementArea?.classList.remove('calibrated');
+        }, 600);
     }
 
     _addListener(target, eventName, handler) {

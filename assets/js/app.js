@@ -175,11 +175,20 @@ class App {
         this.logger.log(this.sensor.pitch, this.sensor.roll);
       }
 
+      if (!this._sensorLossNotified) {
+        this._updateMeasurementStatus();
+      }
+
+      const baseDp = Number.isFinite(this.ui.decimalPlaces) ? this.ui.decimalPlaces : 3;
+      const mode = this.sensor.getMeasurementMode?.() ?? 'active';
+      const displayDp = mode === 'measuring' ? Math.min(baseDp + 1, 6) : baseDp;
+
       // 角度表示更新
       this.ui.updateAngles(
         this.sensor.pitch,
         this.sensor.roll,
-        this.sensor.getTotalAngle()
+        this.sensor.getTotalAngle(),
+        displayDp
       );
 
       // 音声更新
@@ -199,6 +208,19 @@ class App {
     };
 
     this.animFrameId = requestAnimationFrame(loop);
+  }
+
+  _updateMeasurementStatus() {
+    const mode = this.sensor.getMeasurementMode?.() ?? 'active';
+    if (mode === 'measuring') {
+      this.ui.setStatus('active', 'MEASURING');
+      return;
+    }
+    if (mode === 'locking') {
+      this.ui.setStatus('inactive', 'LOCKING...');
+      return;
+    }
+    this.ui.setStatus('active', '計測中');
   }
 
   _handleSensorLoss() {
@@ -234,6 +256,9 @@ class App {
       kalmanQ: this.sensor.kfPitch.q,
       kalmanR: this.sensor.kfPitch.r,
       deadzone: this.sensor.deadzone,
+      staticVarianceThreshold: this.sensor.staticVarianceThreshold,
+      staticDurationFrame: this.sensor.staticDurationFrame,
+      averagingSampleCount: this.sensor.averagingSampleCount,
       soundEnabled: this.audio.enabled,
       soundMode: this.audio.mode,
       soundThreshold: this.audio.threshold,
@@ -284,6 +309,27 @@ class App {
       const val = document.getElementById('deadzone-val');
       if (val) val.textContent = s.deadzone.toFixed(3);
     }
+    if (s.staticVarianceThreshold !== undefined) {
+      this.sensor.staticVarianceThreshold = s.staticVarianceThreshold;
+      const el = document.getElementById('static-variance-threshold');
+      if (el) el.value = s.staticVarianceThreshold;
+      const val = document.getElementById('static-variance-threshold-val');
+      if (val) val.textContent = Number(s.staticVarianceThreshold).toFixed(4);
+    }
+    if (s.staticDurationFrame !== undefined) {
+      this.sensor.staticDurationFrame = Math.max(1, Math.round(s.staticDurationFrame));
+      const el = document.getElementById('static-duration-frame');
+      if (el) el.value = this.sensor.staticDurationFrame;
+      const val = document.getElementById('static-duration-frame-val');
+      if (val) val.textContent = this.sensor.staticDurationFrame;
+    }
+    if (s.averagingSampleCount !== undefined) {
+      this.sensor.averagingSampleCount = Math.max(1, Math.round(s.averagingSampleCount));
+      const el = document.getElementById('averaging-sample-count');
+      if (el) el.value = this.sensor.averagingSampleCount;
+      const val = document.getElementById('averaging-sample-count-val');
+      if (val) val.textContent = this.sensor.averagingSampleCount;
+    }
     if (s.soundEnabled !== undefined) {
       this.audio.enabled = s.soundEnabled;
       document.getElementById('btn-sound-toggle')?.classList.toggle('active', s.soundEnabled);
@@ -330,6 +376,7 @@ class App {
 
   destroy() {
     this.isRunning = false;
+    this.sensor.cancelTwoPointCalibration?.();
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;

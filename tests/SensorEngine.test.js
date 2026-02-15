@@ -167,6 +167,106 @@ describe('SensorEngine', () => {
         expect(newEngine.pitch).toBeCloseTo(0, 1);
     });
 
+    it('静止時にロッキングから測定モードへ遷移すること', () => {
+        const engine = new SensorEngine();
+        engine.staticDurationFrame = 5;
+        engine.averagingSampleCount = 8;
+        engine.staticVarianceThreshold = 0.001;
+
+        for (let i = 0; i < 60; i++) {
+            engine.process(1.25, -0.85);
+        }
+
+        const info = engine.getMeasurementInfo();
+        expect(engine.getMeasurementMode()).toBe('measuring');
+        expect(info.staticSamples).toBeGreaterThanOrEqual(8);
+        expect(info.variance).toBeLessThanOrEqual(engine.staticVarianceThreshold);
+    });
+
+    it('静止平均中に動きが再開したらActiveに戻ること', () => {
+        const engine = new SensorEngine();
+        engine.staticDurationFrame = 5;
+        engine.averagingSampleCount = 8;
+        engine.staticVarianceThreshold = 0.001;
+
+        for (let i = 0; i < 60; i++) {
+            engine.process(2.0, 2.0);
+        }
+        expect(engine.getMeasurementMode()).toBe('measuring');
+        expect(engine.getMeasurementInfo().staticSamples).toBeGreaterThan(0);
+
+        // 変化を大きく与えて静止判定を崩す
+        for (let i = 0; i < 6; i++) {
+            engine.process(i % 2 === 0 ? 15 : -12, i % 2 === 0 ? -14 : 13);
+        }
+
+        const infoAfterMove = engine.getMeasurementInfo();
+        expect(engine.getMeasurementMode()).toBe('active');
+        expect(infoAfterMove.staticSamples).toBe(0);
+    });
+
+    it('2点キャリブレーションでオフセット補正できること', () => {
+        const engine = new SensorEngine();
+        engine.staticDurationFrame = 3;
+        engine.averagingSampleCount = 3;
+        engine.staticVarianceThreshold = 0.01;
+
+        // 意図的にズレたオフセットを作る
+        const beforeCalibPitch = -1.0;
+        const beforeCalibRoll = 0.5;
+        engine.calibPitch = -1.0;
+        engine.calibRoll = 0.5;
+
+        for (let i = 0; i < 40; i++) {
+            engine.process(3.0, 1.0);
+        }
+        const firstPoint = { pitch: engine.pitch, roll: engine.roll };
+        engine.startTwoPointCalibration();
+        const first = engine.captureTwoPointCalibrationPoint();
+        expect(first).toEqual({ ok: true, step: 'awaiting_second' });
+
+        for (let i = 0; i < 40; i++) {
+            engine.process(-3.0, -1.0);
+        }
+        const secondPoint = { pitch: engine.pitch, roll: engine.roll };
+        const expectedAdjustment = {
+            pitch: (firstPoint.pitch + secondPoint.pitch) / 2,
+            roll: (firstPoint.roll + secondPoint.roll) / 2
+        };
+        const second = engine.captureTwoPointCalibrationPoint();
+        expect(second.done).toBe(true);
+        expect(second.ok).toBe(true);
+        expect(second.adjustment.pitch).toBeCloseTo(expectedAdjustment.pitch, 4);
+        expect(second.adjustment.roll).toBeCloseTo(expectedAdjustment.roll, 4);
+        expect(engine.calibPitch).toBeCloseTo(beforeCalibPitch + expectedAdjustment.pitch, 4);
+        expect(engine.calibRoll).toBeCloseTo(beforeCalibRoll + expectedAdjustment.roll, 4);
+        expect(engine.getTwoPointCalibrationState().step).toBe('idle');
+    });
+
+    it('2点キャリブレーションは非静止時に取得できないこと', () => {
+        const engine = new SensorEngine();
+        engine.startTwoPointCalibration();
+        const result = engine.captureTwoPointCalibrationPoint();
+        expect(result).toEqual({ ok: false, reason: 'not_stable' });
+    });
+
+    it('2点キャリブレーションはタイムアウトでキャンセルされること', () => {
+        const engine = new SensorEngine();
+        engine.startTwoPointCalibration();
+        engine.twoPointCalibration.startedAt = Date.now() - engine.twoPointCalibrationTimeoutMs - 1;
+        const result = engine.captureTwoPointCalibrationPoint();
+        expect(result).toEqual({ ok: false, reason: 'timeout' });
+        expect(engine.getTwoPointCalibrationState().step).toBe('idle');
+    });
+
+    it('2点キャリブレーションを手動キャンセルできること', () => {
+        const engine = new SensorEngine();
+        engine.startTwoPointCalibration();
+        const cancelResult = engine.cancelTwoPointCalibration();
+        expect(cancelResult).toEqual({ ok: true });
+        expect(engine.getTwoPointCalibrationState().step).toBe('idle');
+    });
+
     it('不正なセンサー値は処理しないこと', () => {
         const engine = new SensorEngine();
 

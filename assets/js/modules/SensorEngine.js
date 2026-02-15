@@ -3,6 +3,7 @@ import { KalmanFilter1D } from './KalmanFilter1D.js';
 /**
  * センサーエンジン
  * 2軸（Pitch/Roll）のカルマンフィルタ + EMA + デッドゾーン処理を担当
+ * 静止判定時はハイブリッド静止平均（Static Average）を適用する
  */
 export class SensorEngine {
     constructor() {
@@ -42,6 +43,32 @@ export class SensorEngine {
 
         // ロック機能
         this.locked = false;
+
+        // ハイブリッド静止平均パラメータ
+        this.staticVarianceThreshold = 0.002;
+        this.staticDurationFrame = 30;
+        this.averagingSampleCount = 60;
+        this.maxBufferSize = 2000;
+
+        // ハイブリッド静止平均状態
+        this.measurementMode = 'active'; // active | locking | measuring
+        this.measurementVariance = Infinity;
+        this.motionWindow = [];
+        this._prevKfPitch = null;
+        this._prevKfRoll = null;
+        this.staticPitchBuffer = [];
+        this.staticRollBuffer = [];
+        this.staticPitchSum = 0;
+        this.staticRollSum = 0;
+        this.staticSampleCount = 0;
+
+        // 2点キャリブレーション状態
+        this.twoPointCalibrationTimeoutMs = 30000;
+        this.twoPointCalibration = {
+            step: 'idle', // idle | awaiting_first | awaiting_second
+            firstPoint: null,
+            startedAt: 0
+        };
 
         // 永続化されたキャリブレーション値をロード
         this.loadCalibration();
@@ -111,40 +138,56 @@ export class SensorEngine {
         let kfP = this.kfPitch.update(correctedPitch);
         let kfR = this.kfRoll.update(correctedRoll);
 
-        // 3. EMA (指数移動平均) 適用
-        /* 
-           EMA = α * 現在値 + (1 - α) * 前回値
-           ローパスフィルタとして機能し、高周波ノイズを除去する。
-        */
-        if (!this.emaInitialized) {
-            this.emaPitch = kfP;
-            this.emaRoll = kfR;
-            this.emaInitialized = true;
+        // 3. 動き分散を監視し、ハイブリッドモードを切り替える
+        this._updateMotionWindow(kfP, kfR);
+        const staticDetected = this._isStaticDetected();
+
+        if (staticDetected) {
+            // Active -> Static への遷移時は平均バッファを初期化
+            if (this.measurementMode === 'active') {
+                this._resetStaticBuffer();
+            }
+
+            // Static Mode: カルマン後値を積算平均
+            this._pushStaticSample(kfP, kfR);
+            this.measurementMode = this.staticSampleCount >= this._toPositiveInt(this.averagingSampleCount, 60)
+                ? 'measuring'
+                : 'locking';
+
+            this.pitch = this.staticPitchSum / this.staticSampleCount;
+            this.roll = this.staticRollSum / this.staticSampleCount;
         } else {
-            this.emaPitch = this.emaAlpha * kfP + (1 - this.emaAlpha) * this.emaPitch;
-            this.emaRoll = this.emaAlpha * kfR + (1 - this.emaAlpha) * this.emaRoll;
+            // Static -> Active へ戻る際は静止平均状態をクリア
+            if (this.measurementMode !== 'active') {
+                this._resetStaticBuffer();
+                this.measurementMode = 'active';
+            }
+
+            // Active Mode: 従来の EMA + Deadzone を維持
+            if (!this.emaInitialized) {
+                this.emaPitch = kfP;
+                this.emaRoll = kfR;
+                this.emaInitialized = true;
+            } else {
+                this.emaPitch = this.emaAlpha * kfP + (1 - this.emaAlpha) * this.emaPitch;
+                this.emaRoll = this.emaAlpha * kfR + (1 - this.emaAlpha) * this.emaRoll;
+            }
+
+            let newPitch = this.emaPitch;
+            let newRoll = this.emaRoll;
+
+            if (Math.abs(newPitch - this._prevPitch) < this.deadzone) {
+                newPitch = this._prevPitch;
+            }
+            if (Math.abs(newRoll - this._prevRoll) < this.deadzone) {
+                newRoll = this._prevRoll;
+            }
+
+            this._prevPitch = newPitch;
+            this._prevRoll = newRoll;
+            this.pitch = newPitch;
+            this.roll = newRoll;
         }
-
-        // 4. デッドゾーン (ヒステリシス処理)
-        /*
-           微小な変化（deadzone以下）を無視することで、数値のチラつきを抑制し
-           「静止している」感覚をユーザーに与える。
-        */
-        let newPitch = this.emaPitch;
-        let newRoll = this.emaRoll;
-
-        if (Math.abs(newPitch - this._prevPitch) < this.deadzone) {
-            newPitch = this._prevPitch;
-        }
-        if (Math.abs(newRoll - this._prevRoll) < this.deadzone) {
-            newRoll = this._prevRoll;
-        }
-
-        this._prevPitch = newPitch;
-        this._prevRoll = newRoll;
-
-        this.pitch = newPitch;
-        this.roll = newRoll;
 
         // 統計更新
         if (Math.abs(this.pitch) > Math.abs(this.maxPitch)) this.maxPitch = this.pitch;
@@ -153,6 +196,8 @@ export class SensorEngine {
     }
 
     calibrate() {
+        this.cancelTwoPointCalibration();
+
         // 現在の生の値ではなく、フィルタ済みの安定した値をキャリブレーション基準とする
         // あるいは、現在の値をオフセットとして保存する
         // ここでは単純に「現在のフィルタ値」をゼロとするためのオフセットを計算する
@@ -170,14 +215,89 @@ export class SensorEngine {
         const saveResult = this.saveCalibration();
 
         // フィルタ状態をリセットして、新しいゼロ点から開始
-        this.kfPitch.reset();
-        this.kfRoll.reset();
-        this.emaInitialized = false;
-        this.pitch = 0;
-        this.roll = 0;
-        this._prevPitch = 0;
-        this._prevRoll = 0;
+        this._resetPostCalibrationState();
         return saveResult;
+    }
+
+    startTwoPointCalibration() {
+        this.twoPointCalibration.step = 'awaiting_first';
+        this.twoPointCalibration.firstPoint = null;
+        this.twoPointCalibration.startedAt = Date.now();
+        return { ok: true, step: this.twoPointCalibration.step };
+    }
+
+    captureTwoPointCalibrationPoint() {
+        const state = this.twoPointCalibration.step;
+        if (state === 'idle') {
+            return { ok: false, reason: 'not_started' };
+        }
+        if (this._isTwoPointCalibrationExpired()) {
+            this.cancelTwoPointCalibration();
+            return { ok: false, reason: 'timeout' };
+        }
+        if (!this._isCalibrationCaptureStable()) {
+            return { ok: false, reason: 'not_stable' };
+        }
+
+        if (state === 'awaiting_first') {
+            this.twoPointCalibration.firstPoint = {
+                pitch: this.pitch,
+                roll: this.roll
+            };
+            this.twoPointCalibration.step = 'awaiting_second';
+            return { ok: true, step: 'awaiting_second' };
+        }
+
+        if (state === 'awaiting_second') {
+            const first = this.twoPointCalibration.firstPoint;
+            const secondPitch = this.pitch;
+            const secondRoll = this.roll;
+            const offsetPitch = (first.pitch + secondPitch) / 2;
+            const offsetRoll = (first.roll + secondRoll) / 2;
+
+            this.calibPitch += offsetPitch;
+            this.calibRoll += offsetRoll;
+
+            const saveResult = this.saveCalibration();
+            this._resetPostCalibrationState();
+            this.cancelTwoPointCalibration();
+
+            return {
+                ok: saveResult.ok,
+                step: 'completed',
+                done: true,
+                reason: saveResult.reason,
+                adjustment: {
+                    pitch: offsetPitch,
+                    roll: offsetRoll
+                }
+            };
+        }
+
+        return { ok: false, reason: 'invalid_state' };
+    }
+
+    cancelTwoPointCalibration() {
+        this.twoPointCalibration.step = 'idle';
+        this.twoPointCalibration.firstPoint = null;
+        this.twoPointCalibration.startedAt = 0;
+        return { ok: true };
+    }
+
+    getTwoPointCalibrationState() {
+        const step = this.twoPointCalibration.step;
+        const startedAt = this.twoPointCalibration.startedAt;
+        const elapsedMs = startedAt > 0 ? Math.max(0, Date.now() - startedAt) : 0;
+        const remainingMs = startedAt > 0
+            ? Math.max(0, this.twoPointCalibrationTimeoutMs - elapsedMs)
+            : this.twoPointCalibrationTimeoutMs;
+        return {
+            step,
+            hasFirstPoint: Boolean(this.twoPointCalibration.firstPoint),
+            elapsedMs,
+            remainingMs,
+            timeoutMs: this.twoPointCalibrationTimeoutMs
+        };
     }
 
     resetStats() {
@@ -193,6 +313,118 @@ export class SensorEngine {
 
     getTotalAngle() {
         return Math.sqrt(this.pitch * this.pitch + this.roll * this.roll);
+    }
+
+    getMeasurementMode() {
+        return this.measurementMode;
+    }
+
+    getMeasurementInfo() {
+        return {
+            mode: this.measurementMode,
+            variance: this.measurementVariance,
+            staticSamples: this.staticSampleCount
+        };
+    }
+
+    _isCalibrationCaptureStable() {
+        return this.measurementMode === 'locking' || this.measurementMode === 'measuring';
+    }
+
+    _isTwoPointCalibrationExpired() {
+        const startedAt = this.twoPointCalibration.startedAt;
+        if (startedAt <= 0) return false;
+        return Date.now() - startedAt > this.twoPointCalibrationTimeoutMs;
+    }
+
+    _resetPostCalibrationState() {
+        this.kfPitch.reset();
+        this.kfRoll.reset();
+        this.emaInitialized = false;
+        this.pitch = 0;
+        this.roll = 0;
+        this._prevPitch = 0;
+        this._prevRoll = 0;
+        this._prevKfPitch = null;
+        this._prevKfRoll = null;
+        this.motionWindow = [];
+        this.measurementVariance = Infinity;
+        this.measurementMode = 'active';
+        this._resetStaticBuffer();
+    }
+
+    _updateMotionWindow(kfPitch, kfRoll) {
+        if (this._prevKfPitch === null || this._prevKfRoll === null) {
+            this._prevKfPitch = kfPitch;
+            this._prevKfRoll = kfRoll;
+            this._pushMotionMetric(0);
+            return;
+        }
+
+        const deltaPitch = kfPitch - this._prevKfPitch;
+        const deltaRoll = kfRoll - this._prevKfRoll;
+        const metric = Math.sqrt(deltaPitch * deltaPitch + deltaRoll * deltaRoll);
+
+        this._prevKfPitch = kfPitch;
+        this._prevKfRoll = kfRoll;
+        this._pushMotionMetric(metric);
+    }
+
+    _pushMotionMetric(metric) {
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
+        this.motionWindow.push(metric);
+        while (this.motionWindow.length > windowSize) {
+            this.motionWindow.shift();
+        }
+        this.measurementVariance = this._calcVariance(this.motionWindow);
+    }
+
+    _isStaticDetected() {
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
+        if (this.motionWindow.length < windowSize) return false;
+
+        const threshold = Number.isFinite(this.staticVarianceThreshold) && this.staticVarianceThreshold >= 0
+            ? this.staticVarianceThreshold
+            : 0.002;
+        return this.measurementVariance <= threshold;
+    }
+
+    _pushStaticSample(kfPitch, kfRoll) {
+        this.staticPitchBuffer.push(kfPitch);
+        this.staticRollBuffer.push(kfRoll);
+        this.staticPitchSum += kfPitch;
+        this.staticRollSum += kfRoll;
+
+        const maxSize = this._toPositiveInt(this.maxBufferSize, 2000);
+        while (this.staticPitchBuffer.length > maxSize) {
+            this.staticPitchSum -= this.staticPitchBuffer.shift();
+            this.staticRollSum -= this.staticRollBuffer.shift();
+        }
+        this.staticSampleCount = this.staticPitchBuffer.length;
+    }
+
+    _resetStaticBuffer() {
+        this.staticPitchBuffer = [];
+        this.staticRollBuffer = [];
+        this.staticPitchSum = 0;
+        this.staticRollSum = 0;
+        this.staticSampleCount = 0;
+    }
+
+    _calcVariance(values) {
+        if (!values || values.length === 0) return Infinity;
+        const mean = values.reduce((acc, v) => acc + v, 0) / values.length;
+        const sq = values.reduce((acc, v) => {
+            const diff = v - mean;
+            return acc + diff * diff;
+        }, 0);
+        return sq / values.length;
+    }
+
+    _toPositiveInt(value, fallback) {
+        if (!Number.isFinite(value)) return fallback;
+        const normalized = Math.round(value);
+        return normalized > 0 ? normalized : fallback;
     }
 
     _storageErrorReason(error) {

@@ -131,6 +131,8 @@ async function run() {
 
     await page.click('#btn-start');
     await page.waitForSelector('#main-screen.active', { timeout: 5000 });
+    const twoPointButton = await page.$('#btn-calibrate-2pt');
+    assert(Boolean(twoPointButton), '2点キャリブレーションボタンの描画に失敗しました');
 
     await page.evaluate(() => {
       window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { beta: 0.4, gamma: 0.2 }));
@@ -138,6 +140,18 @@ async function run() {
     await page.waitForTimeout(100);
     const activeStatus = await page.textContent('#sensor-status .status-text');
     assert(activeStatus?.includes('計測中'), '起動直後のステータスが計測中ではありません');
+
+    await page.evaluate(() => {
+      for (let i = 0; i < 120; i++) {
+        window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { beta: 0.4, gamma: 0.2 }));
+      }
+    });
+    await page.waitForTimeout(120);
+    const staticStatus = await page.textContent('#sensor-status .status-text');
+    assert(
+      staticStatus?.includes('LOCKING...') || staticStatus?.includes('MEASURING'),
+      `静止モード遷移を確認できません: ${staticStatus}`
+    );
 
     await page.waitForTimeout(1200);
     const lostStatus = await page.textContent('#sensor-status .status-text');
@@ -148,7 +162,7 @@ async function run() {
     });
     await page.waitForTimeout(150);
     const recoveredStatus = await page.textContent('#sensor-status .status-text');
-    assert(recoveredStatus?.includes('計測中'), 'センサー復帰時ステータス遷移に失敗しました');
+    assert(!recoveredStatus?.includes('センサー信号待ち'), 'センサー復帰時ステータス遷移に失敗しました');
 
     await page.evaluate(() => {
       const originalSetItem = Storage.prototype.setItem;
