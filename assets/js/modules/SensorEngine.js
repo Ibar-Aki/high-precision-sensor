@@ -222,7 +222,7 @@ export class SensorEngine {
     startTwoPointCalibration() {
         this.twoPointCalibration.step = 'awaiting_first';
         this.twoPointCalibration.firstPoint = null;
-        this.twoPointCalibration.startedAt = Date.now();
+        this.twoPointCalibration.startedAt = 0;
         return { ok: true, step: this.twoPointCalibration.step };
     }
 
@@ -231,7 +231,7 @@ export class SensorEngine {
         if (state === 'idle') {
             return { ok: false, reason: 'not_started' };
         }
-        if (this._isTwoPointCalibrationExpired()) {
+        if (state === 'awaiting_second' && this._isTwoPointCalibrationExpired()) {
             this.cancelTwoPointCalibration();
             return { ok: false, reason: 'timeout' };
         }
@@ -245,6 +245,7 @@ export class SensorEngine {
                 roll: this.roll
             };
             this.twoPointCalibration.step = 'awaiting_second';
+            this.twoPointCalibration.startedAt = Date.now();
             return { ok: true, step: 'awaiting_second' };
         }
 

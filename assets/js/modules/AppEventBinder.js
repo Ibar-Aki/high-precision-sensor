@@ -33,10 +33,12 @@ export class AppEventBinder {
         this._addListener(document.getElementById('btn-calibrate'), 'click', () => {
             const result = this.sensor.calibrate();
             this._flashCalibrated();
-            this.onToast?.('キャリブレーション完了');
             if (result && !result.ok) {
+                this.onToast?.('キャリブレーションを適用しましたが保存に失敗しました');
                 this.onStorageError?.('キャリブレーション保存', result.reason);
+                return;
             }
+            this.onToast?.('キャリブレーション完了');
         });
 
         this._addListener(document.getElementById('btn-calibrate-2pt'), 'click', () => {
@@ -48,10 +50,12 @@ export class AppEventBinder {
             const result = this.sensor.captureTwoPointCalibrationPoint();
             if (result.done) {
                 this._flashCalibrated();
-                this.onToast?.('2点キャリブレーション完了');
                 if (!result.ok) {
+                    this.onToast?.('2点キャリブレーションを適用しましたが保存に失敗しました');
                     this.onStorageError?.('2点キャリブレーション保存', result.reason);
+                    return;
                 }
+                this.onToast?.('2点キャリブレーション完了');
                 return;
             }
 

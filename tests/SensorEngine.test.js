@@ -252,7 +252,17 @@ describe('SensorEngine', () => {
 
     it('2点キャリブレーションはタイムアウトでキャンセルされること', () => {
         const engine = new SensorEngine();
+        engine.staticDurationFrame = 3;
+        engine.averagingSampleCount = 3;
+        engine.staticVarianceThreshold = 0.01;
+
         engine.startTwoPointCalibration();
+        for (let i = 0; i < 20; i++) {
+            engine.process(1.0, 1.0);
+        }
+        const first = engine.captureTwoPointCalibrationPoint();
+        expect(first).toEqual({ ok: true, step: 'awaiting_second' });
+
         engine.twoPointCalibration.startedAt = Date.now() - engine.twoPointCalibrationTimeoutMs - 1;
         const result = engine.captureTwoPointCalibrationPoint();
         expect(result).toEqual({ ok: false, reason: 'timeout' });
