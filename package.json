@@ -9,7 +9,10 @@
   },
   "scripts": {
     "test": "vitest",
-    "test:e2e-smoke": "node tests/e2e-offline-smoke.mjs"
+    "test:e2e-smoke": "node tests/e2e-offline-smoke.mjs",
+    "serve:iphone": "node scripts/serve-static-lan.mjs --host 0.0.0.0 --port 4173",
+    "tunnel:iphone": "npx --yes localtunnel --port 4173",
+    "iphone:test": "node scripts/start-iphone-test.mjs --port 4173"
   },
   "keywords": [],
   "author": "",

@@ -3,7 +3,7 @@
  * オフラインキャッシュ（キャッシュファースト戦略）
  */
 
-const CACHE_NAME = 'tilt-sensor-v3';
+const CACHE_NAME = 'tilt-sensor-v4';
 const ASSETS = [
     './',
     './index.html',
@@ -15,6 +15,9 @@ const ASSETS = [
     './assets/js/modules/DataLogger.js',
     './assets/js/modules/KalmanFilter1D.js',
     './assets/js/modules/SettingsManager.js',
+    './assets/js/modules/ToastManager.js',
+    './assets/js/modules/LifecycleManager.js',
+    './assets/js/modules/AppEventBinder.js',
     './assets/icons/icon-192.svg',
     './assets/icons/icon-512.svg',
     './manifest.json'

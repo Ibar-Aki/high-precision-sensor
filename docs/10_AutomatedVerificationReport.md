@@ -2,6 +2,7 @@
 
 作成日時: 2026-02-15 20:08 JST  
 作成者: Codex+gpt-5.3-codex (codex-cli 0.101.0)
+更新日: 2026-02-16
 
 ## 1. 概要
 
@@ -43,7 +44,7 @@
 ## 4. 自動化対象の詳細
 
 1. Service Workerキャッシュ  
-`tilt-sensor-v3` に必須アセット（`app.js` と各モジュール、CSS、manifest、icons）が登録済みであることを検証。
+`tilt-sensor-v4` に必須アセット（`app.js` と各モジュール、CSS、manifest、icons）が登録済みであることを検証。
 
 2. センサー欠損/復帰  
 `DeviceOrientationEvent` をモックし、無入力1.2秒後に `センサー信号待ち`、再入力後に `計測中` へ復帰することを検証。

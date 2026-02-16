@@ -2,7 +2,7 @@
 
 - 作成日時: 2026-02-15 22:03:35 +09:00
 - 作成者: Codex＋GPT-5
-- 更新日: 2026-02-15
+- 更新日: 2026-02-16
 
 ## 1. 目的
 
@@ -122,10 +122,19 @@ Safariバージョン:
 恒久公開の前に短時間だけ共有する場合の方法です。
 
 ```powershell
-npx serve . -l 8080
-cloudflared tunnel --url http://localhost:8080
+npm run iphone:test
 ```
 
 注意:
 - PC停止でURLが無効になります。
 - 長期利用には非推奨です。
+- `iphone:test` はローカルサーバー（4173）と `localtunnel` を同時起動します。
+- 代替として2ターミナル構成も可能です。
+
+```powershell
+# ターミナル1
+npm run serve:iphone
+
+# ターミナル2
+npm run tunnel:iphone
+```

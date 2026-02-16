@@ -107,7 +107,7 @@ async function run() {
     await page.reload({ waitUntil: 'networkidle' });
 
     const cachePaths = await page.evaluate(async () => {
-      const cache = await caches.open('tilt-sensor-v3');
+      const cache = await caches.open('tilt-sensor-v4');
       const keys = await cache.keys();
       return keys.map((req) => new URL(req.url).pathname);
     });

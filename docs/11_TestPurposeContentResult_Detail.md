@@ -2,6 +2,7 @@
 
 作成日時: 2026-02-15 20:09:54 +09:00  
 作成者: Codex+gpt-5.3-codex (codex-cli 0.101.0)
+更新日: 2026-02-16
 
 ## 1. 本ドキュメントの目的
 
@@ -27,7 +28,7 @@
 **テスト内容**
 
 - ブラウザ起動後、`navigator.serviceWorker.getRegistration()` でSW登録を確認。
-- `caches.open('tilt-sensor-v3')` からキー一覧を取得。
+- `caches.open('tilt-sensor-v4')` からキー一覧を取得。
 - 以下資産がすべてキャッシュに存在することを検証。
   - `index.html`
   - `assets/css/style.css`
