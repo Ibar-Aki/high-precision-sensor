@@ -53,6 +53,24 @@ function assert(condition, message) {
   }
 }
 
+async function launchTestBrowser() {
+  const requestedChannel = (process.env.PLAYWRIGHT_CHANNEL ?? '').trim();
+  if (!requestedChannel) {
+    return chromium.launch({ headless: true });
+  }
+
+  try {
+    return await chromium.launch({
+      headless: true,
+      channel: requestedChannel
+    });
+  } catch (error) {
+    console.warn(`PLAYWRIGHT_CHANNEL=${requestedChannel} の起動に失敗したため、デフォルトブラウザへフォールバックします。`);
+    console.warn(error?.message ?? error);
+    return chromium.launch({ headless: true });
+  }
+}
+
 async function run() {
   const server = createStaticServer(projectRoot);
   const port = await new Promise((resolve) => {
@@ -63,10 +81,7 @@ async function run() {
   });
   const baseUrl = `http://127.0.0.1:${port}`;
 
-  const browser = await chromium.launch({
-    headless: true,
-    channel: 'msedge'
-  });
+  const browser = await launchTestBrowser();
 
   const context = await browser.newContext();
   const externalFontRequests = [];

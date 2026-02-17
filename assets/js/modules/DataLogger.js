@@ -80,21 +80,27 @@ export class DataLogger {
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
 
-        // ダウンロードリンク生成
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
+        try {
+            // ダウンロードリンク生成
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
 
-        // ファイル名: sensor_log_YYYYMMDD_HHMMSS.csv
-        const now = new Date();
-        const filename = `sensor_log_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}.csv`;
+            // ファイル名: sensor_log_YYYYMMDD_HHMMSS.csv
+            const now = new Date();
+            const filename = `sensor_log_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}.csv`;
 
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-        return filename;
+            return filename;
+        } finally {
+            if (typeof URL.revokeObjectURL === 'function') {
+                URL.revokeObjectURL(url);
+            }
+        }
     }
 
     getStats() {

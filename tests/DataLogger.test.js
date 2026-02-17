@@ -60,7 +60,10 @@ describe('DataLogger', () => {
         logger.log(1.234567, -9.876543);
 
         const created = [];
-        global.URL = { createObjectURL: vi.fn(() => 'blob:mock') };
+        global.URL = {
+            createObjectURL: vi.fn(() => 'blob:mock'),
+            revokeObjectURL: vi.fn()
+        };
         global.document = {
             body: {
                 appendChild: vi.fn(),
@@ -84,5 +87,6 @@ describe('DataLogger', () => {
         expect(filename).toMatch(/^sensor_log_\d{8}_\d{6}\.csv$/);
         expect(created[0].attrs.download).toBe(filename);
         expect(document.body.appendChild).toHaveBeenCalled();
+        expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
     });
 });
