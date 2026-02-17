@@ -1,6 +1,6 @@
 # 高精度傾斜角センサー 技術解説書
 
-更新日: 2026-02-16
+更新日: 2026-02-17
 
 ## 1. 本書の目的
 
@@ -176,3 +176,39 @@ Pitch/Rollそれぞれで上式を適用し、`calibPitch`, `calibRoll` に加�
 - `captureTwoPointCalibrationPoint()`
 - `cancelTwoPointCalibration()`
 - `getTwoPointCalibrationState()`
+
+## 10. 音声出力仕様
+
+### 10.1 出力タイプ
+
+音声出力は上位設定 `outputType` で切り替える。
+
+| `outputType` | 挙動 |
+| :--- | :--- |
+| `normal` | Web Audio API による方向別連続音を出力する。 |
+| `speech` | 10秒ごとに角度読み上げを行う。通常の連続音は停止する。 |
+| `off` | 音声出力を停止する。 |
+
+### 10.2 通常音（`outputType = normal`）
+
+- 下位設定 `soundMode`（`continuous` / `threshold`）を適用する。
+- `soundMode = threshold` のときのみ `soundThreshold` を判定に使用する。
+- `soundEnabled = false`（ヘッダーの音アイコンOFF）の場合は、通常音を強制停止する。
+
+### 10.3 読み上げ音（`outputType = speech`）
+
+- 固定周期 `10000ms`（10秒）で読み上げを行う。
+- 読み上げ対象は毎回2軸（前後・左右）の両方。
+- 角度値は絶対値を `toFixed(1)` で 0.1 度単位に丸める。
+- 文言フォーマット:
+  - `pitch < 0`: `前上がりX.X度`
+  - `pitch >= 0`: `後ろ上がりX.X度`
+  - `roll < 0`: `左上がりX.X度`
+  - `roll >= 0`: `右上がりX.X度`
+  - 合成: `前後文言、左右文言`
+- `soundEnabled = false` の場合、読み上げも停止する。
+
+### 10.4 音量
+
+- `masterVolume` を通常音・読み上げ音の共通音量として扱う。
+- 読み上げ時は `SpeechSynthesisUtterance.volume` に `masterVolume` を適用する。

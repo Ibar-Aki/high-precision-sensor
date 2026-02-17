@@ -260,6 +260,7 @@ class App {
       staticDurationFrame: this.sensor.staticDurationFrame,
       averagingSampleCount: this.sensor.averagingSampleCount,
       soundEnabled: this.audio.enabled,
+      outputType: this.audio.outputType,
       soundMode: this.audio.mode,
       soundThreshold: this.audio.threshold,
       masterVolume: this.audio.masterVolume,
@@ -334,16 +335,33 @@ class App {
       this.audio.enabled = s.soundEnabled;
       document.getElementById('btn-sound-toggle')?.classList.toggle('active', s.soundEnabled);
     }
-    if (s.soundMode !== undefined) {
-      this.audio.mode = s.soundMode;
-      document.querySelectorAll('[data-sound-mode]').forEach(b => {
-        b.classList.toggle('active', b.dataset.soundMode === s.soundMode);
-      });
+
+    const refreshSoundSettingsVisibility = () => {
+      const isNormalOutput = this.audio.outputType === 'normal';
+      const normalSoundSettings = document.getElementById('normal-sound-settings');
+      if (normalSoundSettings) {
+        normalSoundSettings.style.display = isNormalOutput ? 'block' : 'none';
+      }
       const thresholdSetting = document.getElementById('threshold-setting');
       if (thresholdSetting) {
-        thresholdSetting.style.display = s.soundMode === 'threshold' ? 'block' : 'none';
+        thresholdSetting.style.display = isNormalOutput && this.audio.mode === 'threshold' ? 'block' : 'none';
       }
+    };
+
+    const outputType = s.outputType ?? 'normal';
+    this.audio.setOutputType(outputType);
+    document.querySelectorAll('[data-output-type]').forEach(b => {
+      b.classList.toggle('active', b.dataset.outputType === outputType);
+    });
+
+    if (s.soundMode !== undefined) {
+      this.audio.setMode(s.soundMode);
     }
+    document.querySelectorAll('[data-sound-mode]').forEach(b => {
+      b.classList.toggle('active', b.dataset.soundMode === this.audio.mode);
+    });
+    refreshSoundSettingsVisibility();
+
     if (s.soundThreshold !== undefined) {
       this.audio.threshold = s.soundThreshold;
       const el = document.getElementById('sound-threshold');

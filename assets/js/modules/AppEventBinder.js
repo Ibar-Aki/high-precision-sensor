@@ -13,6 +13,18 @@ export class AppEventBinder {
     bind() {
         this.destroy();
 
+        const refreshSoundSettingsVisibility = () => {
+            const isNormalOutput = this.audio.outputType === 'normal';
+            const normalSoundSettings = document.getElementById('normal-sound-settings');
+            if (normalSoundSettings) {
+                normalSoundSettings.style.display = isNormalOutput ? 'block' : 'none';
+            }
+            const thresholdSetting = document.getElementById('threshold-setting');
+            if (thresholdSetting) {
+                thresholdSetting.style.display = isNormalOutput && this.audio.mode === 'threshold' ? 'block' : 'none';
+            }
+        };
+
         this._addListener(document.getElementById('btn-start'), 'click', () => this.onStart?.());
 
         this._addListener(document.getElementById('btn-sound-toggle'), 'click', (e) => {
@@ -144,19 +156,29 @@ export class AppEventBinder {
             document.getElementById('level-sensitivity-val').textContent = Math.round(v);
         });
 
+        document.querySelectorAll('[data-output-type]').forEach((btn) => {
+            this._addListener(btn, 'click', () => {
+                document.querySelectorAll('[data-output-type]').forEach((b) => b.classList.remove('active'));
+                btn.classList.add('active');
+                const outputType = btn.dataset.outputType;
+                this.audio.setOutputType(outputType);
+                refreshSoundSettingsVisibility();
+                this.onSaveSettings?.();
+            });
+        });
+
         document.querySelectorAll('[data-sound-mode]').forEach((btn) => {
             this._addListener(btn, 'click', () => {
                 document.querySelectorAll('[data-sound-mode]').forEach((b) => b.classList.remove('active'));
                 btn.classList.add('active');
                 const mode = btn.dataset.soundMode;
                 this.audio.setMode(mode);
-                const thresholdSetting = document.getElementById('threshold-setting');
-                if (thresholdSetting) {
-                    thresholdSetting.style.display = mode === 'threshold' ? 'block' : 'none';
-                }
+                refreshSoundSettingsVisibility();
                 this.onSaveSettings?.();
             });
         });
+
+        refreshSoundSettingsVisibility();
     }
 
     destroy() {

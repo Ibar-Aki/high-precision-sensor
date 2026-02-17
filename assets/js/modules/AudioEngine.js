@@ -16,11 +16,14 @@ const GAIN_RAMP_SECONDS = 0.05;
 const PAN_RAMP_SECONDS = 0.05;
 const SILENCE_RAMP_SECONDS = 0.05;
 const MASTER_VOLUME_RAMP_SECONDS = 0.02;
+const SPEECH_INTERVAL_MS = 10000;
+const SPEECH_LANG = 'ja-JP';
 
 export class AudioEngine {
     constructor() {
         this.ctx = null;
         this.enabled = false;
+        this.outputType = 'normal'; // 'normal' | 'speech' | 'off'
         this.mode = 'continuous'; // 'continuous' | 'threshold'
         this.threshold = 1.0;
         this.masterVolume = 0.5;
@@ -31,6 +34,9 @@ export class AudioEngine {
         this.panner = null;
         this.masterGain = null;
         this._initialized = false;
+        this._speechTimerId = null;
+        this._latestPitch = 0;
+        this._latestRoll = 0;
     }
 
     init() {
@@ -73,14 +79,30 @@ export class AudioEngine {
             }
 
             this._initialized = true;
+            this._syncOutputMode();
         } catch (e) {
             console.warn('Web Audio API 初期化エラー:', e);
         }
     }
 
     update(pitch, roll) {
-        if (!this._initialized || !this.enabled) {
+        this._latestPitch = pitch;
+        this._latestRoll = roll;
+
+        if (!this.enabled || this.outputType === 'off') {
             this._silenceAll();
+            this._stopSpeechAnnouncements();
+            return;
+        }
+
+        if (this.outputType === 'speech') {
+            this._silenceAll();
+            this._ensureSpeechAnnouncements();
+            return;
+        }
+
+        this._stopSpeechAnnouncements();
+        if (!this._initialized) {
             return;
         }
 
@@ -169,21 +191,97 @@ export class AudioEngine {
 
     toggle() {
         this.enabled = !this.enabled;
-        if (!this.enabled) this._silenceAll();
+        this._syncOutputMode();
         return this.enabled;
     }
 
     setMode(mode) {
-        this.mode = mode;
+        if (mode === 'continuous' || mode === 'threshold') {
+            this.mode = mode;
+        }
+    }
+
+    setOutputType(type) {
+        if (type !== 'normal' && type !== 'speech' && type !== 'off') {
+            return;
+        }
+        this.outputType = type;
+        this._syncOutputMode();
+    }
+
+    _syncOutputMode() {
+        if (!this.enabled || this.outputType === 'off') {
+            this._silenceAll();
+            this._stopSpeechAnnouncements();
+            return;
+        }
+        if (this.outputType === 'speech') {
+            this._silenceAll();
+            this._ensureSpeechAnnouncements();
+            return;
+        }
+        this._stopSpeechAnnouncements();
+    }
+
+    _ensureSpeechAnnouncements() {
+        if (!this._initialized || this._speechTimerId !== null || typeof window === 'undefined') {
+            return;
+        }
+        this._speechTimerId = window.setInterval(() => {
+            this._announceAngles();
+        }, SPEECH_INTERVAL_MS);
+    }
+
+    _stopSpeechAnnouncements() {
+        let stopped = false;
+        if (this._speechTimerId !== null && typeof window !== 'undefined') {
+            window.clearInterval(this._speechTimerId);
+            this._speechTimerId = null;
+            stopped = true;
+        }
+        if (stopped && typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+    }
+
+    _announceAngles() {
+        if (!this.enabled || this.outputType !== 'speech' || typeof window === 'undefined') {
+            return;
+        }
+        if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+            return;
+        }
+
+        const synth = window.speechSynthesis;
+        const utterance = new SpeechSynthesisUtterance(this._buildAnnouncement(this._latestPitch, this._latestRoll));
+        utterance.lang = SPEECH_LANG;
+        utterance.volume = this.masterVolume;
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        if (synth.speaking) {
+            synth.cancel();
+        }
+        synth.speak(utterance);
+    }
+
+    _buildAnnouncement(pitch, roll) {
+        const pitchLabel = pitch < 0 ? '前上がり' : '後ろ上がり';
+        const rollLabel = roll < 0 ? '左上がり' : '右上がり';
+        const pitchValue = Math.abs(pitch).toFixed(1);
+        const rollValue = Math.abs(roll).toFixed(1);
+        return `${pitchLabel}${pitchValue}度、${rollLabel}${rollValue}度`;
     }
 
     destroy() {
-        if (!this._initialized) return;
-        for (const osc of Object.values(this.oscillators)) {
-            try {
-                osc.stop();
-            } catch {
-                // 既に停止済みの場合は無視
+        this._stopSpeechAnnouncements();
+        if (this._initialized) {
+            for (const osc of Object.values(this.oscillators)) {
+                try {
+                    osc.stop();
+                } catch {
+                    // 既に停止済みの場合は無視
+                }
             }
         }
         this.oscillators = {};
@@ -192,6 +290,8 @@ export class AudioEngine {
         this.ctx = null;
         this.masterGain = null;
         this.panner = null;
+        this._latestPitch = 0;
+        this._latestRoll = 0;
         this._initialized = false;
     }
 }

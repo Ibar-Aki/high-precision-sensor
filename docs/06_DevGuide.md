@@ -1,5 +1,5 @@
 # 高精度傾斜角センサー 開発ガイド
-更新日: 2026-02-16
+更新日: 2026-02-17
 
 ## 1. 文書概要
 
@@ -49,6 +49,11 @@ graph TD
 | `staticVarianceThreshold` | `static-variance-threshold` | `0.002` |
 | `staticDurationFrame` | `static-duration-frame` | `30` |
 | `averagingSampleCount` | `averaging-sample-count` | `60` |
+| `soundEnabled` | `btn-sound-toggle` | `false` |
+| `outputType` | `data-output-type` | `normal` |
+| `soundMode` | `data-sound-mode` | `continuous` |
+| `soundThreshold` | `sound-threshold` | `1.0` |
+| `masterVolume` | `master-volume` | `0.5` |
 
 ## 6. ローカル検証
 

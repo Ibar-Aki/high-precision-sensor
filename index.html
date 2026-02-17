@@ -308,19 +308,29 @@
           <div class="setting-group">
             <h4 class="setting-group-title">音声設定</h4>
             <div class="setting-item">
-              <label>音声モード</label>
+              <label>出力タイプ</label>
               <div class="toggle-group">
-                <button class="toggle-btn active" data-sound-mode="continuous">常時</button>
-                <button class="toggle-btn" data-sound-mode="threshold">閾値</button>
+                <button class="toggle-btn active" data-output-type="normal">通常の音</button>
+                <button class="toggle-btn" data-output-type="speech">読み上げ音</button>
+                <button class="toggle-btn" data-output-type="off">OFF</button>
               </div>
             </div>
-            <div class="setting-item" id="threshold-setting">
-              <label for="sound-threshold">音声閾値（°）</label>
-              <div class="slider-row">
-                <input type="range" id="sound-threshold" min="0.1" max="10" step="0.1" value="1.0" class="slider">
-                <span id="sound-threshold-val" class="slider-val">1.0</span>
+            <div id="normal-sound-settings">
+              <div class="setting-item">
+                <label>音声モード</label>
+                <div class="toggle-group">
+                  <button class="toggle-btn active" data-sound-mode="continuous">常時</button>
+                  <button class="toggle-btn" data-sound-mode="threshold">閾値</button>
+                </div>
               </div>
-              <p class="setting-hint">この角度以上で音が鳴ります</p>
+              <div class="setting-item" id="threshold-setting">
+                <label for="sound-threshold">音声閾値（°）</label>
+                <div class="slider-row">
+                  <input type="range" id="sound-threshold" min="0.1" max="10" step="0.1" value="1.0" class="slider">
+                  <span id="sound-threshold-val" class="slider-val">1.0</span>
+                </div>
+                <p class="setting-hint">この角度以上で音が鳴ります</p>
+              </div>
             </div>
             <div class="setting-item">
               <label for="master-volume">マスター音量</label>
