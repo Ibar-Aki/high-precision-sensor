@@ -34,6 +34,8 @@ class App {
 
     this._lastSettingsErrorToastAt = -Infinity;
     this._settingsErrorToastIntervalMs = 3000;
+    this._saveSettingsTimerId = null;
+    this._saveSettingsDebounceMs = 200;
 
     const settingsResult = this.settingsManager.load();
     this.settings = settingsResult.value ?? {};
@@ -48,7 +50,7 @@ class App {
       audio: this.audio,
       ui: this.ui,
       onStart: () => this.start(),
-      onSaveSettings: () => this._saveSettings(),
+      onSaveSettings: () => this._requestSaveSettings(),
       onToast: (message) => this._showToast(message),
       onStorageError: (operation, reason) => this._showStorageErrorToast(operation, reason)
     });
@@ -56,11 +58,11 @@ class App {
 
     this.lifecycleManager = new LifecycleManager({
       onBeforeUnload: () => {
-        this._saveSettings();
+        this._saveSettingsImmediate();
         this.destroy();
       },
       onHidden: () => {
-        this._saveSettings();
+        this._saveSettingsImmediate();
       }
     });
     this.lifecycleManager.bind();
@@ -250,7 +252,29 @@ class App {
   }
 
   /* ---------- 設定の永続化 ---------- */
-  _saveSettings() {
+  _requestSaveSettings() {
+    if (this._saveSettingsTimerId !== null) {
+      clearTimeout(this._saveSettingsTimerId);
+    }
+    this._saveSettingsTimerId = window.setTimeout(() => {
+      this._saveSettingsTimerId = null;
+      this._saveSettingsNow();
+    }, this._saveSettingsDebounceMs);
+  }
+
+  _saveSettingsImmediate() {
+    this._clearPendingSettingsSave();
+    this._saveSettingsNow();
+  }
+
+  _clearPendingSettingsSave() {
+    if (this._saveSettingsTimerId !== null) {
+      clearTimeout(this._saveSettingsTimerId);
+      this._saveSettingsTimerId = null;
+    }
+  }
+
+  _saveSettingsNow() {
     const s = {
       emaAlpha: this.sensor.emaAlpha,
       kalmanQ: this.sensor.kfPitch.q,
@@ -394,6 +418,7 @@ class App {
 
   destroy() {
     this.isRunning = false;
+    this._clearPendingSettingsSave();
     this.sensor.cancelTwoPointCalibration?.();
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);

@@ -54,10 +54,14 @@ export class SensorEngine {
         this.measurementMode = 'active'; // active | locking | measuring
         this.measurementVariance = Infinity;
         this.motionWindow = [];
+        this.motionWindowStart = 0;
+        this.motionWindowSum = 0;
+        this.motionWindowSqSum = 0;
         this._prevKfPitch = null;
         this._prevKfRoll = null;
         this.staticPitchBuffer = [];
         this.staticRollBuffer = [];
+        this.staticBufferStart = 0;
         this.staticPitchSum = 0;
         this.staticRollSum = 0;
         this.staticSampleCount = 0;
@@ -349,6 +353,9 @@ export class SensorEngine {
         this._prevKfPitch = null;
         this._prevKfRoll = null;
         this.motionWindow = [];
+        this.motionWindowStart = 0;
+        this.motionWindowSum = 0;
+        this.motionWindowSqSum = 0;
         this.measurementVariance = Infinity;
         this.measurementMode = 'active';
         this._resetStaticBuffer();
@@ -373,16 +380,32 @@ export class SensorEngine {
 
     _pushMotionMetric(metric) {
         const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
-        this.motionWindow.push(metric);
-        while (this.motionWindow.length > windowSize) {
-            this.motionWindow.shift();
+        const safeMetric = Number.isFinite(metric) ? metric : 0;
+        this.motionWindow.push(safeMetric);
+        this.motionWindowSum += safeMetric;
+        this.motionWindowSqSum += safeMetric * safeMetric;
+        while (this.motionWindow.length - this.motionWindowStart > windowSize) {
+            const dropped = this.motionWindow[this.motionWindowStart];
+            this.motionWindowStart += 1;
+            this.motionWindowSum -= dropped;
+            this.motionWindowSqSum -= dropped * dropped;
         }
-        this.measurementVariance = this._calcVariance(this.motionWindow);
+        this._compactMotionWindowIfNeeded();
+
+        const sampleCount = this.motionWindow.length - this.motionWindowStart;
+        if (sampleCount <= 0) {
+            this.measurementVariance = Infinity;
+            return;
+        }
+        const mean = this.motionWindowSum / sampleCount;
+        const variance = this.motionWindowSqSum / sampleCount - mean * mean;
+        this.measurementVariance = variance > 0 ? variance : 0;
     }
 
     _isStaticDetected() {
         const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
-        if (this.motionWindow.length < windowSize) return false;
+        const sampleCount = this.motionWindow.length - this.motionWindowStart;
+        if (sampleCount < windowSize) return false;
 
         const threshold = Number.isFinite(this.staticVarianceThreshold) && this.staticVarianceThreshold >= 0
             ? this.staticVarianceThreshold
@@ -397,29 +420,39 @@ export class SensorEngine {
         this.staticRollSum += kfRoll;
 
         const maxSize = this._toPositiveInt(this.maxBufferSize, 2000);
-        while (this.staticPitchBuffer.length > maxSize) {
-            this.staticPitchSum -= this.staticPitchBuffer.shift();
-            this.staticRollSum -= this.staticRollBuffer.shift();
+        while (this.staticPitchBuffer.length - this.staticBufferStart > maxSize) {
+            this.staticPitchSum -= this.staticPitchBuffer[this.staticBufferStart];
+            this.staticRollSum -= this.staticRollBuffer[this.staticBufferStart];
+            this.staticBufferStart += 1;
         }
-        this.staticSampleCount = this.staticPitchBuffer.length;
+        this._compactStaticBuffersIfNeeded();
+        this.staticSampleCount = this.staticPitchBuffer.length - this.staticBufferStart;
     }
 
     _resetStaticBuffer() {
         this.staticPitchBuffer = [];
         this.staticRollBuffer = [];
+        this.staticBufferStart = 0;
         this.staticPitchSum = 0;
         this.staticRollSum = 0;
         this.staticSampleCount = 0;
     }
 
-    _calcVariance(values) {
-        if (!values || values.length === 0) return Infinity;
-        const mean = values.reduce((acc, v) => acc + v, 0) / values.length;
-        const sq = values.reduce((acc, v) => {
-            const diff = v - mean;
-            return acc + diff * diff;
-        }, 0);
-        return sq / values.length;
+    _compactMotionWindowIfNeeded() {
+        if (this.motionWindowStart < 256 || this.motionWindowStart * 2 < this.motionWindow.length) {
+            return;
+        }
+        this.motionWindow = this.motionWindow.slice(this.motionWindowStart);
+        this.motionWindowStart = 0;
+    }
+
+    _compactStaticBuffersIfNeeded() {
+        if (this.staticBufferStart < 256 || this.staticBufferStart * 2 < this.staticPitchBuffer.length) {
+            return;
+        }
+        this.staticPitchBuffer = this.staticPitchBuffer.slice(this.staticBufferStart);
+        this.staticRollBuffer = this.staticRollBuffer.slice(this.staticBufferStart);
+        this.staticBufferStart = 0;
     }
 
     _toPositiveInt(value, fallback) {

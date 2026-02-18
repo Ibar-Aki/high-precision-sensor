@@ -25,30 +25,53 @@ export class UIManager {
 
         this.decimalPlaces = 3;
         this.levelSensitivity = 10; // °
+        this._lastPitchBarWidth = '';
+        this._lastRollBarWidth = '';
+        this._lastBubbleCx = null;
+        this._lastBubbleCy = null;
+        this._lastBubbleFill = '';
+        this._lastArcPitchPath = '';
+        this._lastArcRollPath = '';
+        this._lastStatusState = '';
+        this._lastStatusText = '';
+        this._statusTextEl = this.els.sensorStatus?.querySelector('.status-text') ?? null;
     }
 
     updateAngles(pitch, roll, total, dpOverride = null) {
         const dp = dpOverride ?? this.decimalPlaces;
+        const absPitch = Math.abs(pitch);
+        const absRoll = Math.abs(roll);
 
         // デジタル値
-        this.els.pitchValue.textContent = Math.abs(pitch).toFixed(dp);
-        this.els.rollValue.textContent = Math.abs(roll).toFixed(dp);
-        this.els.totalValue.textContent = total.toFixed(dp);
+        const pitchText = absPitch.toFixed(dp);
+        const rollText = absRoll.toFixed(dp);
+        const totalText = total.toFixed(dp);
+        if (this.els.pitchValue.textContent !== pitchText) this.els.pitchValue.textContent = pitchText;
+        if (this.els.rollValue.textContent !== rollText) this.els.rollValue.textContent = rollText;
+        if (this.els.totalValue.textContent !== totalText) this.els.totalValue.textContent = totalText;
 
         // 方向インジケーター
         this._updateDirection(this.els.pitchDir, pitch, '前傾', '後傾', '水平');
         this._updateDirection(this.els.rollDir, roll, '右傾', '左傾', '水平');
 
         // カラーリング
-        this._colorizeAngle(this.els.pitchValue, Math.abs(pitch));
-        this._colorizeAngle(this.els.rollValue, Math.abs(roll));
+        this._colorizeAngle(this.els.pitchValue, absPitch);
+        this._colorizeAngle(this.els.rollValue, absRoll);
 
         // 角度バー
         const barScale = 10; // ±10°でフル
-        const pitchPct = Math.min(Math.abs(pitch) / barScale * 50, 50);
-        const rollPct = Math.min(Math.abs(roll) / barScale * 50, 50);
-        this.els.pitchBar.style.width = `${pitchPct}%`;
-        this.els.rollBar.style.width = `${rollPct}%`;
+        const pitchPct = Math.min(absPitch / barScale * 50, 50);
+        const rollPct = Math.min(absRoll / barScale * 50, 50);
+        const pitchWidth = `${pitchPct}%`;
+        const rollWidth = `${rollPct}%`;
+        if (this._lastPitchBarWidth !== pitchWidth) {
+            this.els.pitchBar.style.width = pitchWidth;
+            this._lastPitchBarWidth = pitchWidth;
+        }
+        if (this._lastRollBarWidth !== rollWidth) {
+            this.els.rollBar.style.width = rollWidth;
+            this._lastRollBarWidth = rollWidth;
+        }
 
         // SVG バブル
         this._updateBubble(pitch, roll);
@@ -59,54 +82,80 @@ export class UIManager {
 
     _updateDirection(el, value, posLabel, negLabel, zeroLabel) {
         const threshold = 0.02;
-        el.className = 'direction-indicator';
+        let text = zeroLabel;
+        let stateClass = 'dir-level';
         if (Math.abs(value) < threshold) {
-            el.textContent = zeroLabel;
-            el.classList.add('dir-level');
+            text = zeroLabel;
         } else if (value > 0) {
-            el.textContent = posLabel;
-            // pitch>0 → 後傾, roll>0 → 右傾 — ラベルに応じたクラス
-            if (posLabel === '前傾') el.classList.add('dir-front');
-            else if (posLabel === '後傾') el.classList.add('dir-back');
-            else if (posLabel === '右傾') el.classList.add('dir-right');
-            else el.classList.add('dir-left');
+            text = posLabel;
+            stateClass = this._directionClassFromLabel(posLabel);
         } else {
-            el.textContent = negLabel;
-            if (negLabel === '前傾') el.classList.add('dir-front');
-            else if (negLabel === '後傾') el.classList.add('dir-back');
-            else if (negLabel === '右傾') el.classList.add('dir-right');
-            else el.classList.add('dir-left');
+            text = negLabel;
+            stateClass = this._directionClassFromLabel(negLabel);
+        }
+
+        if (el.dataset.directionClass !== stateClass) {
+            el.className = 'direction-indicator';
+            el.classList.add(stateClass);
+            el.dataset.directionClass = stateClass;
+        }
+        if (el.textContent !== text) {
+            el.textContent = text;
         }
     }
 
     _colorizeAngle(el, absVal) {
-        el.classList.remove('level-ok', 'level-warn', 'level-danger');
-        if (absVal < 0.5) el.classList.add('level-ok');
-        else if (absVal < 3) el.classList.add('level-warn');
-        else el.classList.add('level-danger');
+        const levelClass = absVal < 0.5 ? 'level-ok' : (absVal < 3 ? 'level-warn' : 'level-danger');
+        const prevLevelClass = el.dataset.levelClass;
+        if (prevLevelClass === levelClass) return;
+        if (prevLevelClass) {
+            el.classList.remove(prevLevelClass);
+        } else {
+            el.classList.remove('level-ok', 'level-warn', 'level-danger');
+        }
+        el.classList.add(levelClass);
+        el.dataset.levelClass = levelClass;
     }
 
     _updateBubble(pitch, roll) {
         const sens = this.levelSensitivity;
-        const cx = 150 + Math.max(-120, Math.min(120, (roll / sens) * 120));
-        const cy = 150 + Math.max(-120, Math.min(120, (pitch / sens) * 120));
-        this.els.bubble.setAttribute('cx', cx);
-        this.els.bubble.setAttribute('cy', cy);
+        const cx = Number((150 + Math.max(-120, Math.min(120, (roll / sens) * 120))).toFixed(2));
+        const cy = Number((150 + Math.max(-120, Math.min(120, (pitch / sens) * 120))).toFixed(2));
+        if (this._lastBubbleCx !== cx) {
+            this.els.bubble.setAttribute('cx', cx);
+            this._lastBubbleCx = cx;
+        }
+        if (this._lastBubbleCy !== cy) {
+            this.els.bubble.setAttribute('cy', cy);
+            this._lastBubbleCy = cy;
+        }
 
         // バブルの色を合成角度に応じて変化
         const total = Math.sqrt(pitch * pitch + roll * roll);
         const hue = Math.max(0, 180 - total * 18); // 180(cyan) → 0(red)
-        this.els.bubble.setAttribute('fill', `hsl(${hue}, 100%, 60%)`);
+        const fill = `hsl(${hue.toFixed(1)}, 100%, 60%)`;
+        if (this._lastBubbleFill !== fill) {
+            this.els.bubble.setAttribute('fill', fill);
+            this._lastBubbleFill = fill;
+        }
     }
 
     _updateArcs(pitch, roll) {
         // ピッチ弧（垂直方向）
         const pAngle = Math.max(-90, Math.min(90, pitch * 3));
-        this.els.arcPitch.setAttribute('d', this._describeArc(150, 150, 135, -90, -90 + pAngle));
+        const pitchPath = this._describeArc(150, 150, 135, -90, -90 + pAngle);
+        if (this._lastArcPitchPath !== pitchPath) {
+            this.els.arcPitch.setAttribute('d', pitchPath);
+            this._lastArcPitchPath = pitchPath;
+        }
 
         // ロール弧（水平方向）
         const rAngle = Math.max(-90, Math.min(90, roll * 3));
-        this.els.arcRoll.setAttribute('d', this._describeArc(150, 150, 130, 0, rAngle));
+        const rollPath = this._describeArc(150, 150, 130, 0, rAngle);
+        if (this._lastArcRollPath !== rollPath) {
+            this.els.arcRoll.setAttribute('d', rollPath);
+            this._lastArcRollPath = rollPath;
+        }
     }
 
     _describeArc(cx, cy, r, startAngle, endAngle) {
@@ -132,8 +181,17 @@ export class UIManager {
 
     setStatus(state, text) {
         const el = this.els.sensorStatus;
-        el.className = 'status-badge status-' + state;
-        el.querySelector('.status-text').textContent = text;
+        if (this._lastStatusState !== state) {
+            el.className = 'status-badge status-' + state;
+            this._lastStatusState = state;
+        }
+        if (!this._statusTextEl) {
+            this._statusTextEl = el.querySelector('.status-text');
+        }
+        if (this._statusTextEl && this._lastStatusText !== text) {
+            this._statusTextEl.textContent = text;
+            this._lastStatusText = text;
+        }
     }
 
     createRecordingButton(onStart, onStop) {
@@ -179,5 +237,12 @@ export class UIManager {
         window.dispatchEvent(new CustomEvent('app:toast', {
             detail: { message: msg }
         }));
+    }
+
+    _directionClassFromLabel(label) {
+        if (label === '前傾') return 'dir-front';
+        if (label === '後傾') return 'dir-back';
+        if (label === '右傾') return 'dir-right';
+        return 'dir-left';
     }
 }

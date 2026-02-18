@@ -189,4 +189,21 @@ describe('AudioEngine', () => {
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
         expect(speechSynthesisMock.cancel).toHaveBeenCalled();
     });
+
+    it('読み上げモード中にサイレンス命令を重複発行しないこと', () => {
+        const engine = new AudioEngine();
+        engine.enabled = true;
+        engine.setOutputType('speech');
+        engine.init();
+
+        const initialFrontSilenceCalls = engine.gains.front.gain.setTargetAtTime.mock.calls.length;
+        const initialBackSilenceCalls = engine.gains.back.gain.setTargetAtTime.mock.calls.length;
+
+        for (let i = 0; i < 20; i++) {
+            engine.update(0.4, -0.6);
+        }
+
+        expect(engine.gains.front.gain.setTargetAtTime.mock.calls.length).toBe(initialFrontSilenceCalls);
+        expect(engine.gains.back.gain.setTargetAtTime.mock.calls.length).toBe(initialBackSilenceCalls);
+    });
 });

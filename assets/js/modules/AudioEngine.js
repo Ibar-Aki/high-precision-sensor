@@ -37,6 +37,7 @@ export class AudioEngine {
         this._speechTimerId = null;
         this._latestPitch = 0;
         this._latestRoll = 0;
+        this._isSilenced = false;
     }
 
     init() {
@@ -122,6 +123,17 @@ export class AudioEngine {
             }
         }
 
+        const frontActive = pitch < -AXIS_ACTIVE_THRESHOLD;
+        const backActive = pitch > AXIS_ACTIVE_THRESHOLD;
+        const leftActive = roll < -AXIS_ACTIVE_THRESHOLD;
+        const rightActive = roll > AXIS_ACTIVE_THRESHOLD;
+        if (!frontActive && !backActive && !leftActive && !rightActive) {
+            this._silenceAll();
+            return;
+        }
+
+        this._isSilenced = false;
+
         const now = this.ctx.currentTime;
 
         // パン（左右）
@@ -134,7 +146,7 @@ export class AudioEngine {
         const maxAngle = MAX_TILT_ANGLE_FOR_AUDIO;
 
         // 前方向
-        if (pitch < -AXIS_ACTIVE_THRESHOLD) {
+        if (frontActive) {
             const intensity = Math.min(absPitch / maxAngle, 1);
             const freq = PITCH_BASE_FREQUENCY + intensity * PITCH_FREQUENCY_RANGE;
             this.oscillators.front.frequency.setTargetAtTime(freq, now, GAIN_RAMP_SECONDS);
@@ -144,7 +156,7 @@ export class AudioEngine {
         }
 
         // 後方向
-        if (pitch > AXIS_ACTIVE_THRESHOLD) {
+        if (backActive) {
             const intensity = Math.min(absPitch / maxAngle, 1);
             const freq = PITCH_BASE_FREQUENCY + intensity * PITCH_FREQUENCY_RANGE;
             this.oscillators.back.frequency.setTargetAtTime(freq, now, GAIN_RAMP_SECONDS);
@@ -154,7 +166,7 @@ export class AudioEngine {
         }
 
         // 左方向
-        if (roll < -AXIS_ACTIVE_THRESHOLD) {
+        if (leftActive) {
             const intensity = Math.min(absRoll / maxAngle, 1);
             const freq = ROLL_BASE_FREQUENCY + intensity * ROLL_FREQUENCY_RANGE;
             this.oscillators.left.frequency.setTargetAtTime(freq, now, GAIN_RAMP_SECONDS);
@@ -164,7 +176,7 @@ export class AudioEngine {
         }
 
         // 右方向
-        if (roll > AXIS_ACTIVE_THRESHOLD) {
+        if (rightActive) {
             const intensity = Math.min(absRoll / maxAngle, 1);
             const freq = ROLL_BASE_FREQUENCY + intensity * ROLL_FREQUENCY_RANGE;
             this.oscillators.right.frequency.setTargetAtTime(freq, now, GAIN_RAMP_SECONDS);
@@ -176,10 +188,12 @@ export class AudioEngine {
 
     _silenceAll() {
         if (!this._initialized) return;
+        if (this._isSilenced) return;
         const now = this.ctx.currentTime;
         for (const g of Object.values(this.gains)) {
             g.gain.setTargetAtTime(0, now, SILENCE_RAMP_SECONDS);
         }
+        this._isSilenced = true;
     }
 
     setMasterVolume(v) {
@@ -292,6 +306,7 @@ export class AudioEngine {
         this.panner = null;
         this._latestPitch = 0;
         this._latestRoll = 0;
+        this._isSilenced = false;
         this._initialized = false;
     }
 }

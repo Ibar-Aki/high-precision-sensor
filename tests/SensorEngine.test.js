@@ -277,6 +277,36 @@ describe('SensorEngine', () => {
         expect(engine.getTwoPointCalibrationState().step).toBe('idle');
     });
 
+    it('動きウィンドウが長時間処理でも上限サイズを超えて増えないこと', () => {
+        const engine = new SensorEngine();
+        engine.staticDurationFrame = 7;
+
+        for (let i = 0; i < 8000; i++) {
+            engine.process(Math.sin(i / 3) * 20, Math.cos(i / 4) * 20);
+        }
+
+        const activeWindowSize = engine.motionWindow.length - engine.motionWindowStart;
+        expect(activeWindowSize).toBeLessThanOrEqual(7);
+        expect(engine.motionWindow.length).toBeLessThan(600);
+    });
+
+    it('静止平均バッファが上限サイズを超えて増えないこと', () => {
+        const engine = new SensorEngine();
+        engine.staticDurationFrame = 3;
+        engine.averagingSampleCount = 5;
+        engine.staticVarianceThreshold = 0.01;
+        engine.maxBufferSize = 20;
+
+        for (let i = 0; i < 4000; i++) {
+            engine.process(1.0, -1.0);
+        }
+
+        expect(engine.getMeasurementMode()).toBe('measuring');
+        expect(engine.staticSampleCount).toBeLessThanOrEqual(20);
+        expect(engine.staticPitchBuffer.length).toBeLessThan(600);
+        expect(engine.staticRollBuffer.length).toBeLessThan(600);
+    });
+
     it('不正なセンサー値は処理しないこと', () => {
         const engine = new SensorEngine();
 
