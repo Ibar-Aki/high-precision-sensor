@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>机の水平ガイド</title>
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="机の調整ボルトを何回転させるかを表示と音声で案内します。">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div id="orientation-overlay" class="orientation-overlay">縦向きでご利用ください</div>
+
+  <section id="splash-screen" class="screen active">
+    <div class="card splash-card">
+      <h1>机の水平ガイド</h1>
+      <p>iPhoneセンサーで傾きを計測し、4隅のボルト調整量を案内します。</p>
+      <button id="enable-sensor-btn" class="btn primary">センサーを有効化</button>
+    </div>
+  </section>
+
+  <section id="app-screen" class="screen">
+    <header class="header">
+      <h1>Table Level Guide</h1>
+      <div id="status-text" class="status" data-status="active">待機中</div>
+    </header>
+
+    <main class="layout">
+      <div class="card telemetry-card">
+        <h2>計測値</h2>
+        <div class="telemetry-grid">
+          <div>ピッチ: <strong id="pitch-value">0.000°</strong></div>
+          <div>ロール: <strong id="roll-value">0.000°</strong></div>
+          <div>モード: <strong id="measurement-mode">active</strong></div>
+          <div>安定度: <strong id="stability-value">0%</strong></div>
+        </div>
+
+        <div class="actions">
+          <button id="start-measure-btn" class="btn primary">計測開始</button>
+          <button id="remeasure-btn" class="btn">再計測</button>
+          <button id="manual-confirm-btn" class="btn warning">手動確定</button>
+        </div>
+
+        <div id="level-banner" class="level-banner">水平達成</div>
+        <div id="warning-box" class="warning-box"></div>
+      </div>
+
+      <div class="card table-card">
+        <h2>4隅調整</h2>
+        <div class="table-map">
+          <div id="leg-BL" class="leg-card">BL: -</div>
+          <div id="leg-BR" class="leg-card">BR: -</div>
+          <div id="leg-FL" class="leg-card">FL: -</div>
+          <div id="leg-FR" class="leg-card">FR: -</div>
+        </div>
+        <p class="note">1本調整ごとに再計測してください。</p>
+
+        <h3>詳細指示</h3>
+        <ul id="instruction-list" class="instruction-list">
+          <li>計測結果待ちです。</li>
+        </ul>
+      </div>
+
+      <div class="card settings-card">
+        <h2>設定</h2>
+        <form>
+          <div class="form-grid">
+            <label>幅(mm)<input id="table-width" type="number" min="300" max="3000" step="1"></label>
+            <label>奥行(mm)<input id="table-depth" type="number" min="300" max="3000" step="1"></label>
+            <label>ボルト種類
+              <select id="bolt-type">
+                <option value="M6">M6 (1.00mm)</option>
+                <option value="M8">M8 (1.25mm)</option>
+                <option value="M10">M10 (1.50mm)</option>
+                <option value="M12">M12 (1.75mm)</option>
+                <option value="custom">カスタム</option>
+              </select>
+            </label>
+            <label id="bolt-custom-row">カスタムピッチ(mm/rev)
+              <input id="bolt-custom-pitch" type="number" min="0.1" max="5" step="0.01">
+            </label>
+            <label>ピッチ軸対応
+              <select id="phone-pitch-axis">
+                <option value="depth">奥行き方向</option>
+                <option value="width">幅方向</option>
+              </select>
+            </label>
+            <label>調整モード
+              <select id="adjust-mode">
+                <option value="bidirectional">双方向 (CW/CCW)</option>
+                <option value="cw_only">CW専用</option>
+              </select>
+            </label>
+            <label>閾値(度)<input id="level-threshold" type="number" min="0.1" max="3" step="0.1"></label>
+            <label>言語
+              <select id="language">
+                <option value="ja">日本語</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+            <label>音量(0-1)<input id="volume" type="number" min="0" max="1" step="0.1"></label>
+            <label>EMA α<input id="filter-alpha" type="number" min="0.01" max="0.5" step="0.01"></label>
+            <label>Kalman Q<input id="kalman-q" type="number" min="0.0001" max="0.1" step="0.0001"></label>
+            <label>Kalman R<input id="kalman-r" type="number" min="0.01" max="1" step="0.01"></label>
+            <label>静止分散閾値<input id="static-variance-threshold" type="number" min="0.0001" max="0.05" step="0.0001"></label>
+            <label>静止判定フレーム<input id="static-duration-frames" type="number" min="5" max="240" step="1"></label>
+            <label>平均サンプル数<input id="averaging-sample-count" type="number" min="5" max="300" step="1"></label>
+            <label>タイムアウト(秒)<input id="measurement-timeout-sec" type="number" min="5" max="120" step="1"></label>
+            <label>回転警告上限<input id="max-turns-warning" type="number" min="1" max="20" step="0.5"></label>
+            <label>表示下限(回転)<input id="min-turns-to-show" type="number" min="0" max="1" step="0.25"></label>
+            <label class="check"><input id="invert-pitch" type="checkbox">ピッチ符号反転</label>
+            <label class="check"><input id="invert-roll" type="checkbox">ロール符号反転</label>
+            <label class="check"><input id="voice-enabled" type="checkbox">音声案内ON</label>
+          </div>
+
+          <div class="actions">
+            <button id="save-settings-btn" class="btn primary">設定保存</button>
+            <button id="reset-settings-btn" class="btn" type="button">初期値に戻す</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </section>
+
+  <script type="module" src="./assets/js/app.js"></script>
+</body>
+</html>
