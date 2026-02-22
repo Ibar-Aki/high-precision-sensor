@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高精度傾斜角センサー 今後の計画</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans JP', sans-serif;
+            background-color: #f1f5f9;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .a4-landscape {
+            width: 297mm;
+            height: 210mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.98);
+            transform-origin: top center;
+        }
+
+        @media print {
+            body {
+                background: transparent;
+            }
+
+            .a4-landscape {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen">
+    <div class="a4-landscape relative">
+
+        <!-- ===== Top Bar ===== -->
+        <div class="h-3 bg-gradient-to-r from-cyan-900 via-teal-700 to-cyan-900 w-full shrink-0"></div>
+
+        <div class="flex-1 flex flex-col px-10 pt-2 pb-3">
+
+            <!-- ===== Header ===== -->
+            <header class="flex justify-between items-end mb-3 border-b-2 border-slate-200 pb-2">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 tracking-widest code-font mb-1">PROJECT <span
+                            class="text-teal-600">HIGH-PRECISION-SENSOR</span> // v1.0</p>
+                    <h1 class="text-[26px] font-bold text-slate-800 tracking-tight leading-tight">
+                        今後の計画
+                        <span class="text-lg text-slate-500 font-medium ml-2">─ ロードマップ・フィールドテスト・長期構想</span>
+                    </h1>
+                </div>
+                <p
+                    class="text-[10px] text-slate-400 font-bold bg-slate-50 border border-slate-200 px-2 py-1 rounded code-font shrink-0">
+                    2026.02</p>
+            </header>
+
+            <!-- ===== Main 3-Column Grid ===== -->
+            <main class="flex-1 grid grid-cols-12 gap-4">
+
+                <!-- ========== LEFT COLUMN (Col 1-4): ロードマップとKPI ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- ロードマップ タイムライン -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            開発ロードマップ
+                        </h3>
+
+                        <div class="flex flex-col gap-3">
+                            <!-- v1.0 -->
+                            <div class="flex gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div
+                                        class="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center shrink-0 shadow-sm">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <div class="w-0.5 flex-1 bg-teal-300 mt-1"></div>
+                                </div>
+                                <div class="flex-1 pb-1">
+                                    <p class="text-[11px] font-bold text-teal-700">v1.0 — 初期リリース <span
+                                            class="text-[9px] text-teal-500 code-font">✅ Completed</span></p>
+                                    <ul class="text-[9px] text-slate-600 mt-1 space-y-0.5">
+                                        <li>• 2軸同時測定（Pitch / Roll）</li>
+                                        <li>• 3段フィルタ + ハイブリッドアルゴリズム</li>
+                                        <li>• 音声ガイド（4方向 + 読み上げ）</li>
+                                        <li>• PWA + ダークモードUI</li>
+                                        <li>• 2点キャリブレーション</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- v1.1 -->
+                            <div class="flex gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div
+                                        class="w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center shrink-0 shadow-sm">
+                                        <span class="text-white text-[10px] font-bold">▶</span>
+                                    </div>
+                                    <div class="w-0.5 flex-1 bg-slate-200 mt-1"></div>
+                                </div>
+                                <div class="flex-1 pb-1">
+                                    <p class="text-[11px] font-bold text-amber-700">v1.1 — UX/UIマイクロ改善 <span
+                                            class="text-[9px] text-amber-500 code-font">Next</span></p>
+                                    <ul class="text-[9px] text-slate-600 mt-1 space-y-0.5">
+                                        <li>• 全設定の永続化強化</li>
+                                        <li>• ランドスケープ対応</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- v1.2 -->
+                            <div class="flex gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div
+                                        class="w-8 h-8 bg-slate-300 rounded-full flex items-center justify-center shrink-0 shadow-sm">
+                                        <span class="text-slate-500 text-[10px] font-bold">1.2</span>
+                                    </div>
+                                    <div class="w-0.5 flex-1 bg-slate-200 mt-1"></div>
+                                </div>
+                                <div class="flex-1 pb-1">
+                                    <p class="text-[11px] font-bold text-slate-600">v1.2 — データロギング <span
+                                            class="text-[9px] text-slate-400 code-font">Plan</span></p>
+                                    <ul class="text-[9px] text-slate-500 mt-1 space-y-0.5">
+                                        <li>• CSVエクスポート（クリップボード / ファイル保存）</li>
+                                        <li>• 簡易グラフ表示（過去10秒のラインチャート）</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- v2.0 -->
+                            <div class="flex gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div
+                                        class="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center shrink-0">
+                                        <span class="text-slate-400 text-[10px] font-bold">2.0</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-[11px] font-bold text-slate-500">v2.0 — コネクティビティ <span
+                                            class="text-[9px] text-slate-400 code-font">Long-term</span></p>
+                                    <ul class="text-[9px] text-slate-400 mt-1 space-y-0.5">
+                                        <li>• WebSocketで遠隔モニタリング</li>
+                                        <li>• 複数台連携（Z軸ねじれ計測）</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 受入KPI -->
+                    <section class="bg-slate-800 text-white rounded-md p-4 shadow-md">
+                        <h3 class="text-[12px] font-bold mb-3 flex items-center border-b border-slate-600 pb-2">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-400 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            受入判定KPI
+                        </h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-teal-900 bg-opacity-50 border border-teal-700 rounded p-2.5 text-center">
+                                <p class="text-[8px] text-slate-400 font-bold mb-0.5">誤ロック率（作業中）</p>
+                                <p class="text-xl font-bold text-teal-300">&lt; 1<span class="text-sm">%</span></p>
+                            </div>
+                            <div class="bg-cyan-900 bg-opacity-50 border border-cyan-700 rounded p-2.5 text-center">
+                                <p class="text-[8px] text-slate-400 font-bold mb-0.5">計測完了 P95</p>
+                                <p class="text-xl font-bold text-cyan-300">&lt; 2.0<span class="text-sm">秒</span></p>
+                            </div>
+                            <div class="bg-slate-700 border border-slate-600 rounded p-2.5 text-center">
+                                <p class="text-[8px] text-slate-400 font-bold mb-0.5">復帰時間</p>
+                                <p class="text-xl font-bold text-slate-200">&lt; 300<span class="text-sm">ms</span></p>
+                            </div>
+                            <div class="bg-slate-700 border border-slate-600 rounded p-2.5 text-center">
+                                <p class="text-[8px] text-slate-400 font-bold mb-0.5">安定精度（peak-to-peak）</p>
+                                <p class="text-xl font-bold text-slate-200">&lt; 0.002<span class="text-sm">°</span></p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ========== CENTER COLUMN (Col 5-8): フィールドテスト計画 ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- フィールドテスト計画 -->
+                    <section class="border-l-4 border-amber-500 bg-amber-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-slate-800 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-amber-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                            フィールドテスト計画（実験計画）
+                        </h3>
+
+                        <div class="space-y-2.5">
+                            <!-- Step 1 -->
+                            <div class="bg-white p-2.5 rounded border border-amber-200 shadow-sm">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span
+                                        class="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">Step
+                                        1</span>
+                                    <span class="text-[10px] font-bold text-slate-700">環境ノイズ測定</span>
+                                </div>
+                                <ul class="text-[9px] text-slate-600 space-y-0.5">
+                                    <li>• デバッグモードで生分散値をリアルタイム表示</li>
+                                    <li>• 現場の机上に30秒間静置してベースライン測定</li>
+                                    <li>• 作業中（ライナー抜き差し）の分散値を記録</li>
+                                    <li>• S/N比（静置 vs 作業中）の確認</li>
+                                </ul>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div class="bg-white p-2.5 rounded border border-amber-200 shadow-sm">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span
+                                        class="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">Step
+                                        2</span>
+                                    <span class="text-[10px] font-bold text-slate-700">閾値チューニング</span>
+                                </div>
+                                <ul class="text-[9px] text-slate-600 space-y-0.5">
+                                    <li>• 推奨式: <span class="code-font text-amber-700">max(P99(静置)×1.2,
+                                            P95(作業中)×0.2)</span></li>
+                                    <li>• Golden Rule: 手持ちでロックされず、設置でロック</li>
+                                </ul>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div class="bg-white p-2.5 rounded border border-amber-200 shadow-sm">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span
+                                        class="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">Step
+                                        3</span>
+                                    <span class="text-[10px] font-bold text-slate-700">運用UXテスト</span>
+                                </div>
+                                <ul class="text-[9px] text-slate-600 space-y-0.5">
+                                    <li>• 設置→計測完了までの時間計測（目標: 2秒以内）</li>
+                                    <li>• 外乱ロバスト性（歩行・重機で値が飛ばないか）</li>
+                                    <li>• 復帰テスト（叩いた瞬間ロック解除されるか）</li>
+                                </ul>
+                            </div>
+
+                            <!-- Step 4 -->
+                            <div class="bg-white p-2.5 rounded border border-amber-200 shadow-sm">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span
+                                        class="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">Step
+                                        4</span>
+                                    <span class="text-[10px] font-bold text-slate-700">精度比較検証</span>
+                                </div>
+                                <p class="text-[9px] text-slate-600">高級水準器（デジタルプロトラクター等）と並置して計測し、一致性または高安定性を確認する。</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 既知の課題 -->
+                    <section class="bg-rose-50 border border-rose-200 rounded-md p-3">
+                        <h3 class="text-[12px] font-bold text-rose-800 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-rose-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            既知の課題
+                        </h3>
+                        <ul class="text-[9px] text-slate-600 space-y-1">
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-rose-400 shrink-0">⚠</span>
+                                <span><strong>iOS 13未満の非互換：</strong>DeviceOrientation API仕様変更前の端末では動作しない</span>
+                            </li>
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-rose-400 shrink-0">⚠</span>
+                                <span><strong>温度ドリフト：</strong>センサーの温度特性補正は未実装。測定ごとのキャリブレーションで対応中</span>
+                            </li>
+                        </ul>
+                    </section>
+                </div>
+
+                <!-- ========== RIGHT COLUMN (Col 9-12): 計画詳細 ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- v1.1 詳細 -->
+                    <section class="border-l-4 border-cyan-500 bg-cyan-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-cyan-900 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-cyan-600 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            v1.1：UX/UI マイクロ改善
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="bg-white p-2.5 rounded border border-cyan-100 shadow-sm">
+                                <p class="font-bold text-cyan-800 text-[11px] mb-0.5">■ 設定永続化の強化</p>
+                                <p class="text-[10px] text-slate-600">音量だけでなく、フィルタ強度・表示桁数・サウンドモードも次回起動時に自動復元。</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-cyan-100 shadow-sm">
+                                <p class="font-bold text-cyan-800 text-[11px] mb-0.5">■ ランドスケープ対応</p>
+                                <p class="text-[10px] text-slate-600">横画面時のレイアウト最適化。設置方向に応じた柔軟な表示。</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- v1.2 詳細 -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                            </svg>
+                            v1.2：データロギング
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="bg-slate-50 p-2.5 rounded border border-slate-100">
+                                <p class="font-bold text-slate-700 text-[11px] mb-0.5">■ CSVエクスポート</p>
+                                <p class="text-[10px] text-slate-600">直近1分間の測定データをCSV形式で出力。クリップボードコピーまたはファイル保存に対応。</p>
+                            </div>
+                            <div class="bg-slate-50 p-2.5 rounded border border-slate-100">
+                                <p class="font-bold text-slate-700 text-[11px] mb-0.5">■ 簡易リアルタイムグラフ</p>
+                                <p class="text-[10px] text-slate-600">過去10秒間の傾き変化をラインチャートで表示。調整作業の進捗を視覚的に把握。</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- v2.0 長期構想 -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm flex-1">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            v2.0：コネクティビティ（長期構想）
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="bg-slate-50 p-2.5 rounded border border-slate-100">
+                                <p class="font-bold text-slate-700 text-[11px] mb-0.5">■ WebSocketリアルタイム通信</p>
+                                <p class="text-[10px] text-slate-600">PC上の親機へセンサーデータをリアルタイムに送信。遠隔地からの水平出し指示が可能に。</p>
+                            </div>
+                            <div class="bg-slate-50 p-2.5 rounded border border-slate-100">
+                                <p class="font-bold text-slate-700 text-[11px] mb-0.5">■ 複数台連携</p>
+                                <p class="text-[10px] text-slate-600">2台のiPhoneを連携し、X-Y平面に加えてZ軸（ねじれ）の同時測定を実現。</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+
+            <!-- ===== Footer ===== -->
+            <footer
+                class="mt-3 pt-2.5 border-t border-slate-200 flex justify-between items-center text-[8px] text-slate-400 code-font">
+                <p>※ ロードマップは開発状況に応じて変更の可能性があります。フィールドテスト計画は 07_Optimization_and_Verification_Plan.md に詳細記載。</p>
+                <p>High Precision Tilt Sensor PWA // Future Roadmap // MIT License</p>
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>

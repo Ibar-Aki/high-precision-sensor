@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高精度傾斜角センサー プロジェクト概要</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans JP', sans-serif;
+            background-color: #f1f5f9;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .a4-landscape {
+            width: 297mm;
+            height: 210mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.98);
+            transform-origin: top center;
+        }
+
+        @media print {
+            body {
+                background: transparent;
+            }
+
+            .a4-landscape {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen">
+    <div class="a4-landscape relative">
+
+        <!-- ===== Top Bar ===== -->
+        <div class="h-3 bg-gradient-to-r from-cyan-900 via-teal-700 to-cyan-900 w-full shrink-0"></div>
+
+        <div class="flex-1 flex flex-col px-10 pt-3 pb-5">
+
+            <!-- ===== Header ===== -->
+            <header class="flex justify-between items-end mb-5 border-b-2 border-slate-200 pb-3">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 tracking-widest code-font mb-1">PROJECT <span
+                            class="text-teal-600">HIGH-PRECISION-SENSOR</span> // v1.0</p>
+                    <h1 class="text-[26px] font-bold text-slate-800 tracking-tight leading-tight">
+                        高精度傾斜角センサー PWA
+                        <span class="text-lg text-slate-500 font-medium ml-2">─ プロジェクト概要</span>
+                    </h1>
+                </div>
+                <p
+                    class="text-[10px] text-slate-400 font-bold bg-slate-50 border border-slate-200 px-2 py-1 rounded code-font shrink-0">
+                    2026.02</p>
+            </header>
+
+            <!-- ===== Main 3-Column Grid ===== -->
+            <main class="flex-1 grid grid-cols-12 gap-5">
+
+                <!-- ========== LEFT COLUMN (Col 1-4) ========== -->
+                <div class="col-span-4 flex flex-col gap-4">
+
+                    <!-- 開発動機 -->
+                    <section class="border-l-4 border-teal-500 bg-teal-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-slate-800 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            開発動機：現場の水平出し
+                        </h3>
+                        <ul class="text-[11px] text-slate-600 space-y-2">
+                            <li><span class="font-bold text-slate-800">1.
+                                    高級水準器は高価：</span>デジタルプロトラクターは数万円〜。現場の全作業員に配布するのは非現実的。</li>
+                            <li><span class="font-bold text-slate-800">2.
+                                    気泡管の精度限界：</span>目視読取に個人差があり、±0.5°程度が限界。微調整が困難。</li>
+                            <li><span class="font-bold text-slate-800">3.
+                                    スマホセンサーの未活用：</span>全員のポケットに高性能MEMSセンサーがある。適切なフィルタリングで精密計測器に変わる。
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- 解決策 -->
+                    <section class="border-l-4 border-cyan-500 bg-cyan-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-cyan-900 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-cyan-600 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            解決策：中核機能
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="bg-white p-2.5 rounded border border-cyan-100 shadow-sm">
+                                <p class="font-bold text-cyan-800 text-[11px] mb-0.5">■ カルマンフィルタ＋EMAによる高精度計測</p>
+                                <p class="text-[10px] text-slate-600">3段フィルタ連鎖でセンサーノイズを確率的に除去。分解能0.01°を実現。</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-cyan-100 shadow-sm">
+                                <p class="font-bold text-cyan-800 text-[11px] mb-0.5">■ 音声ガイドでハンズフリー計測</p>
+                                <p class="text-[10px] text-slate-600">Web Audio APIによる4方向フィードバック音。画面を見ずに傾きを把握可能。</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-cyan-100 shadow-sm">
+                                <p class="font-bold text-cyan-800 text-[11px] mb-0.5">■ PWA＝インストール不要で即利用</p>
+                                <p class="text-[10px] text-slate-600">ブラウザで開くだけで動作。オフライン対応。ホーム画面に追加でネイティブ感覚。</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 動作環境 -->
+                    <section class="bg-slate-50 border border-slate-200 rounded-md p-4 flex-1">
+                        <h3 class="text-[13px] font-bold text-slate-700 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            動作環境・利用条件
+                        </h3>
+                        <ul class="text-[10px] text-slate-600 space-y-1.5">
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-slate-400 shrink-0">●</span>
+                                <span><strong>対応端末：</strong>iPhone / Android / PC のブラウザ（PWA対応）</span>
+                            </li>
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-slate-400 shrink-0">●</span>
+                                <span><strong>通信環境：</strong>完全オフライン動作。ネット接続不要</span>
+                            </li>
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-slate-400 shrink-0">●</span>
+                                <span><strong>データ保管：</strong>端末ローカルのみ（外部送信なし）</span>
+                            </li>
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-slate-400 shrink-0">●</span>
+                                <span><strong>ライセンス：</strong>MIT License（オープンソース）</span>
+                            </li>
+                        </ul>
+                    </section>
+                </div>
+
+                <!-- ========== CENTER COLUMN (Col 5-8) ========== -->
+                <div class="col-span-4 flex flex-col gap-4">
+
+                    <!-- 計測フロー -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3 class="text-[13px] font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">計測フロー
+                        </h3>
+                        <div class="flex flex-col items-center gap-1">
+                            <!-- Step 1 -->
+                            <div class="flex items-center w-full gap-3">
+                                <div
+                                    class="w-9 h-9 bg-slate-100 border border-slate-300 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
+                                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-[11px] font-bold text-slate-800">1. センサー有効化</p>
+                                    <p class="text-[9px] text-slate-500">DeviceOrientation APIの許可をリクエスト。iOSではユーザー操作が必須。
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-slate-300 text-xs">▼</div>
+                            <!-- Step 2 -->
+                            <div class="flex items-center w-full gap-3">
+                                <div
+                                    class="w-9 h-9 bg-teal-50 border border-teal-200 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
+                                    <svg class="w-5 h-5 text-teal-500" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-[11px] font-bold text-slate-800">2. キャリブレーション</p>
+                                    <p class="text-[9px] text-slate-500">1点校正（現在値を0にリセット）または2点校正（180度反転法でオフセット除去）。</p>
+                                </div>
+                            </div>
+                            <div class="text-slate-300 text-xs">▼</div>
+                            <!-- Step 3 -->
+                            <div class="flex items-center w-full gap-3">
+                                <div
+                                    class="w-9 h-9 bg-cyan-50 border border-cyan-200 rounded-lg flex items-center justify-center shrink-0 shadow-inner">
+                                    <svg class="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-[11px] font-bold text-slate-800">3. フィルタ処理パイプライン</p>
+                                    <p class="text-[9px] text-slate-500">Kalman → EMA → Deadzone の3段フィルタ。静止時はStatic
+                                        Average自動切替。</p>
+                                </div>
+                            </div>
+                            <div class="text-slate-300 text-xs">▼</div>
+                            <!-- Step 4 -->
+                            <div class="flex items-center w-full gap-3">
+                                <div
+                                    class="w-9 h-9 bg-slate-800 border border-slate-700 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-[11px] font-bold text-slate-800">4. リアルタイム表示・音声出力</p>
+                                    <p class="text-[9px] text-slate-500">SVG水準器＋デジタル数値表示。方向別音声ガイド or 角度読み上げ。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 技術スタック -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm flex-1">
+                        <h3 class="text-[13px] font-bold text-slate-800 mb-2 border-b border-slate-100 pb-1.5">採用技術スタック
+                        </h3>
+                        <table class="w-full text-[10px] text-left border-collapse">
+                            <thead class="bg-slate-100 text-slate-600">
+                                <tr>
+                                    <th class="py-1 px-1.5 border border-slate-200 w-[18%]">領域</th>
+                                    <th class="py-1 px-1.5 border border-slate-200 w-[32%]">技術</th>
+                                    <th class="py-1 px-1.5 border border-slate-200">役割</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-600">
+                                <tr>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 bg-slate-50 font-bold" rowspan="3">
+                                        センサー</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 font-bold text-teal-700">
+                                        DeviceOrientation API</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200">傾斜角の生データ取得</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 font-bold text-teal-700">Kalman +
+                                        EMA + Deadzone</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200">3段フィルタによるノイズ除去</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 font-bold text-teal-700">Web Audio
+                                        API</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200">4方向フィードバック音</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 bg-slate-50 font-bold" rowspan="3">
+                                        フロント</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 font-bold text-cyan-700">HTML / CSS
+                                        / JS</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200">フレームワーク不使用・軽量</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 font-bold text-cyan-700">SVG</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200">アナログ水準器の描画</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 font-bold text-cyan-700">Service
+                                        Worker</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200">オフライン動作・PWA</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 bg-slate-50 font-bold" rowspan="2">
+                                        テスト</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 font-bold text-violet-700">Vitest
+                                    </td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200">ユニットテスト</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1.5 border border-slate-200 font-bold text-violet-700">
+                                        Playwright</td>
+                                    <td class="py-0.5 px-1.5 border border-slate-200">E2Eスモークテスト</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+                </div>
+
+                <!-- ========== RIGHT COLUMN (Col 9-12) ========== -->
+                <div class="col-span-4 flex flex-col gap-4">
+
+                    <!-- 性能指標 -->
+                    <section class="bg-slate-800 text-white rounded-md p-4 shadow-md">
+                        <h3 class="text-[13px] font-bold mb-3 flex items-center border-b border-slate-600 pb-2">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-400 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            計測性能
+                        </h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-teal-900 bg-opacity-50 border border-teal-700 rounded p-3 text-center">
+                                <p class="text-[9px] text-slate-400 font-bold mb-0.5">分解能</p>
+                                <p class="text-2xl font-bold text-teal-300">0.01<span class="text-sm">°</span></p>
+                                <p class="text-[8px] text-slate-400 mt-0.5">デジタル表示精度</p>
+                            </div>
+                            <div class="bg-cyan-900 bg-opacity-50 border border-cyan-700 rounded p-3 text-center">
+                                <p class="text-[9px] text-slate-400 font-bold mb-0.5">静的安定性</p>
+                                <p class="text-2xl font-bold text-cyan-300">±0.05<span class="text-sm">°</span></p>
+                                <p class="text-[8px] text-slate-400 mt-0.5">フィルタ処理後の揺らぎ</p>
+                            </div>
+                            <div class="bg-slate-700 border border-slate-600 rounded p-3 text-center">
+                                <p class="text-[9px] text-slate-400 font-bold mb-0.5">相対精度（キャリブ後）</p>
+                                <p class="text-2xl font-bold text-slate-200">±0.1<span class="text-sm">°</span></p>
+                                <p class="text-[8px] text-slate-400 mt-0.5">変化量検出の精度</p>
+                            </div>
+                            <div class="bg-slate-700 border border-slate-600 rounded p-3 text-center">
+                                <p class="text-[9px] text-slate-400 font-bold mb-0.5">同時測定軸</p>
+                                <p class="text-2xl font-bold text-slate-200">2<span class="text-sm">軸</span></p>
+                                <p class="text-[8px] text-slate-400 mt-0.5">Pitch（前後）+ Roll（左右）</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 特徴・UI -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3 class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">プレミアムUI＆UX
+                        </h3>
+                        <div class="space-y-2.5">
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-teal-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">UI</span>
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-700">ダークモード＋グラスモーフィズム</p>
+                                    <p class="text-[9px] text-slate-500">OLED映えする高級感あるデザイン。現場での視認性も高い。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-teal-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">UI</span>
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-700">SVGリアルタイム水準器</p>
+                                    <p class="text-[9px] text-slate-500">アナログ水準器を模した直感的なビジュアル。バブルの動きで傾きを即座に把握。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-cyan-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">UX</span>
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-700">4方向音声フィードバック</p>
+                                    <p class="text-[9px] text-slate-500">前後左右の傾き方向と量を音の高さ・パターンで通知。ハンズフリーで作業可能。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-cyan-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">UX</span>
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-700">2点キャリブレーション</p>
+                                    <p class="text-[9px] text-slate-500">180度反転法でセンサー固有オフセットを除去。より正確な絶対値計測を実現。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ユースケース -->
+                    <section class="bg-slate-50 border border-slate-200 rounded-md p-3 flex-1">
+                        <h3 class="text-[12px] font-bold text-slate-700 mb-2">主なユースケース</h3>
+                        <div class="flex gap-2">
+                            <div class="bg-white border border-slate-100 rounded p-2 flex-1 text-center shadow-sm">
+                                <p class="text-[10px] font-bold text-slate-700">机の水平出し</p>
+                                <p class="text-[8px] text-slate-500 mt-0.5">建設現場での設備調整</p>
+                            </div>
+                            <div class="bg-white border border-slate-100 rounded p-2 flex-1 text-center shadow-sm">
+                                <p class="text-[10px] font-bold text-slate-700">設備傾斜監視</p>
+                                <p class="text-[8px] text-slate-500 mt-0.5">経年変化の定期測定</p>
+                            </div>
+                            <div class="bg-white border border-slate-100 rounded p-2 flex-1 text-center shadow-sm">
+                                <p class="text-[10px] font-bold text-slate-700">DIY水平確認</p>
+                                <p class="text-[8px] text-slate-500 mt-0.5">棚板・床の簡易測定</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+
+            <!-- ===== Footer ===== -->
+            <footer
+                class="mt-3 pt-2.5 border-t border-slate-200 flex justify-between items-center text-[8px] text-slate-400 code-font">
+                <p>※ 精度値はフィルタパラメータおよび端末個体差により変動します。キャリブレーション後の相対精度として記載。</p>
+                <p>High Precision Tilt Sensor PWA // Project Overview // MIT License</p>
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>

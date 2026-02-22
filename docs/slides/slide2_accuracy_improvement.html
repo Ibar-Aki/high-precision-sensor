@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高精度傾斜角センサー 高精度化技術</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans JP', sans-serif;
+            background-color: #f1f5f9;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .a4-landscape {
+            width: 297mm;
+            height: 210mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.98);
+            transform-origin: top center;
+        }
+
+        @media print {
+            body {
+                background: transparent;
+            }
+
+            .a4-landscape {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pipeline-arrow {
+            color: #94a3b8;
+            font-size: 16px;
+            line-height: 1;
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen">
+    <div class="a4-landscape relative">
+
+        <!-- ===== Top Bar ===== -->
+        <div class="h-3 bg-gradient-to-r from-cyan-900 via-teal-700 to-cyan-900 w-full shrink-0"></div>
+
+        <div class="flex-1 flex flex-col px-10 pt-2 pb-3">
+
+            <!-- ===== Header ===== -->
+            <header class="flex justify-between items-end mb-3 border-b-2 border-slate-200 pb-2">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 tracking-widest code-font mb-1">PROJECT <span
+                            class="text-teal-600">HIGH-PRECISION-SENSOR</span> // v1.0</p>
+                    <h1 class="text-[26px] font-bold text-slate-800 tracking-tight leading-tight">
+                        高精度化テクノロジー
+                        <span class="text-lg text-slate-500 font-medium ml-2">─ フィルタ設計とハイブリッドアルゴリズム</span>
+                    </h1>
+                </div>
+                <p
+                    class="text-[10px] text-slate-400 font-bold bg-slate-50 border border-slate-200 px-2 py-1 rounded code-font shrink-0">
+                    2026.02</p>
+            </header>
+
+            <!-- ===== Main 3-Column Grid ===== -->
+            <main class="flex-1 grid grid-cols-12 gap-4">
+
+                <!-- ========== LEFT COLUMN (Col 1-4): フィルタパイプライン ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- フィルタパイプライン -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                            フィルタパイプライン（通常モード）
+                        </h3>
+                        <!-- Pipeline Diagram -->
+                        <div class="flex flex-col items-center gap-0.5">
+                            <div class="w-full bg-slate-100 border border-slate-300 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-slate-700">Raw Data（生センサー値）</p>
+                                <p class="text-[8px] text-slate-400">DeviceOrientation API から取得</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-teal-50 border border-teal-200 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-teal-800">Calibration（校正）</p>
+                                <p class="text-[8px] text-slate-500">オフセット値を減算</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-cyan-50 border border-cyan-200 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-cyan-800">1D Kalman Filter</p>
+                                <p class="text-[8px] text-slate-500">Q=0.001, R=0.1 で確率的ノイズ除去</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-blue-50 border border-blue-200 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-blue-800">EMA（指数移動平均）</p>
+                                <p class="text-[8px] text-slate-500">α=0.08 で高周波成分を平滑化</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-violet-50 border border-violet-200 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-violet-800">Deadzone（デッドゾーン）</p>
+                                <p class="text-[8px] text-slate-500">θ=0.005° 未満の変動を遮断</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-slate-800 text-white rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold">Output（画面表示）</p>
+                                <p class="text-[8px] text-slate-300">安定したデジタル値を出力</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 各フィルタの役割 -->
+                    <section class="border-l-4 border-teal-500 bg-teal-50 bg-opacity-60 rounded-r-md p-4 flex-1">
+                        <h3 class="text-[12px] font-bold text-slate-800 mb-2">各段の設計意図</h3>
+                        <ul class="text-[10px] text-slate-600 space-y-1.5">
+                            <li><span class="font-bold text-teal-700">Kalman：</span>観測ノイズ v_t を確率的に推定・除去。状態遷移 Q
+                                を小さく設定し、静的計測に最適化。</li>
+                            <li><span class="font-bold text-cyan-700">EMA：</span>カルマン出力の残留高周波を平滑化。α が小さいほど安定、追従性は低下。
+                            </li>
+                            <li><span
+                                    class="font-bold text-violet-700">Deadzone：</span>表示上の「ちらつき」を完全に遮断。ユーザーが読み取りやすい静止表示を実現。
+                            </li>
+                        </ul>
+                    </section>
+                </div>
+
+                <!-- ========== CENTER COLUMN (Col 5-8): ハイブリッド＋2点校正 ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- ハイブリッドアルゴリズム -->
+                    <section class="border-l-4 border-amber-500 bg-amber-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-slate-800 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-amber-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            ハイブリッドアルゴリズム（核心技術）
+                        </h3>
+                        <p class="text-[10px] text-slate-600 mb-3">センサー値の分散を常時監視し、2つのモードを<strong>自動切替</strong>する。</p>
+
+                        <!-- Mode Cards -->
+                        <div class="space-y-2">
+                            <div class="bg-white p-2.5 rounded border border-amber-200 shadow-sm">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span
+                                        class="bg-emerald-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">ACTIVE</span>
+                                    <span class="text-[10px] font-bold text-slate-700">調整中・移動中</span>
+                                </div>
+                                <p class="text-[9px] text-slate-600">Kalman + EMA + Deadzone の通常フィルタ処理。機敏な応答性を維持。</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-amber-200 shadow-sm">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span
+                                        class="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">LOCKING</span>
+                                    <span class="text-[10px] font-bold text-slate-700">静止を検知中</span>
+                                </div>
+                                <p class="text-[9px] text-slate-600">分散が閾値以下に。バッファ蓄積を開始し、測定精度が向上中。</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-amber-200 shadow-sm">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span
+                                        class="bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">MEASURING</span>
+                                    <span class="text-[10px] font-bold text-slate-700">高精度計測中</span>
+                                </div>
+                                <p class="text-[9px] text-slate-600">蓄積バッファの全平均を出力。サンプル数 n が増えるほどノイズは 1/√n で減衰し、真値に収束。
+                                </p>
+                            </div>
+                        </div>
+
+                    </section>
+
+                    <!-- 2点キャリブレーション -->
+                    <section class="border-l-4 border-blue-500 bg-blue-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-blue-900 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-blue-600 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            2点キャリブレーション
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="bg-white p-2 rounded border border-blue-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-blue-800 mb-1">原理：180度反転法</p>
+                                <p class="text-[9px] text-slate-600">1点目 m₁ = t + b、2点目（180度回転） m₂ = −t + b</p>
+                                <p class="text-[9px] text-slate-600 mt-0.5">→ オフセット <span
+                                        class="font-bold text-blue-700 code-font">b = (m₁ + m₂) / 2</span></p>
+                            </div>
+                            <div class="bg-white p-2 rounded border border-blue-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-blue-800 mb-0.5">手順</p>
+                                <ol class="text-[9px] text-slate-600 space-y-0.5 list-decimal list-inside">
+                                    <li>表向きで面に置く → <span class="code-font text-blue-600">[2点校正]</span> 押下</li>
+                                    <li>表向きのまま180度回転 → 再度 <span class="code-font text-blue-600">[2点校正]</span></li>
+                                    <li>Pitch/Roll各軸のオフセットが自動補正</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 精度の変化 -->
+                    <section class="bg-slate-800 text-white rounded-md p-4 shadow-md flex-1">
+                        <h3 class="text-[12px] font-bold mb-2 border-b border-slate-600 pb-1.5">精度向上の実績</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3">
+                                <div class="text-center">
+                                    <p class="text-[8px] text-slate-400">Active Mode</p>
+                                    <p class="text-lg font-bold text-slate-300">±0.05°</p>
+                                </div>
+                                <div class="text-teal-400 text-lg font-bold">→</div>
+                                <div class="text-center">
+                                    <p class="text-[8px] text-teal-400">Static Mode（目標）</p>
+                                    <p class="text-lg font-bold text-teal-300">±0.002°</p>
+                                </div>
+                                <div class="bg-teal-900 bg-opacity-50 border border-teal-700 rounded px-2 py-1 ml-auto">
+                                    <p class="text-[10px] font-bold text-teal-300">25倍</p>
+                                    <p class="text-[8px] text-slate-400">精度向上</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ========== RIGHT COLUMN (Col 9-12): 検討施策一覧 ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- 検討した施策一覧 -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                            検討した高精度化施策
+                        </h3>
+                        <table class="w-full text-[9px] text-left border-collapse">
+                            <thead class="bg-slate-100 text-slate-600">
+                                <tr>
+                                    <th class="py-1 px-1 border border-slate-200 w-[28%]">施策</th>
+                                    <th class="py-1 px-1 border border-slate-200 w-[18%]">精度</th>
+                                    <th class="py-1 px-1 border border-slate-200 w-[18%]">難易度</th>
+                                    <th class="py-1 px-1 border border-slate-200">判定</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-600">
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">A: 単純平均</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">高</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">低</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 text-rose-500 font-bold">不採用</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">B: メディアン</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">中</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">低</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 text-rose-500 font-bold">不採用</td>
+                                </tr>
+                                <tr class="bg-teal-50">
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold text-teal-800">C: 静止平均積算 ⭐
+                                    </td>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold text-teal-700">特大</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">中</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 text-teal-700 font-bold">採用</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">D: 加速度特化</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">高</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">中</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 text-slate-400">将来検討</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">E: ZUPT</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">高</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">中</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 text-slate-400">Cに統合</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">F: 多点補正</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">—</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">高</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 text-slate-400">将来検討</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">G: 温度補正</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">—</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">高</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 text-rose-500 font-bold">不採用</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <!-- 採用理由 -->
+                    <section class="border-l-4 border-emerald-500 bg-emerald-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[12px] font-bold text-slate-800 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            施策C 採用の決め手
+                        </h3>
+                        <ul class="text-[10px] text-slate-600 space-y-1.5">
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-emerald-500 shrink-0 font-bold">✓</span>
+                                <span><strong>ユースケースに最適：</strong>「机に置いて手を離す」＝完全静止が保証される環境</span>
+                            </li>
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-emerald-500 shrink-0 font-bold">✓</span>
+                                <span><strong>理論的に最適：</strong>静止データの平均は真値に収束（大数の法則）</span>
+                            </li>
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-emerald-500 shrink-0 font-bold">✓</span>
+                                <span><strong>実装が迅速：</strong>既存SensorEngineに静止判定＋バッファを追加するのみ</span>
+                            </li>
+                            <li class="flex items-start gap-1.5">
+                                <span class="text-emerald-500 shrink-0 font-bold">✓</span>
+                                <span><strong>既存性能を損なわない：</strong>動的時は従来アルゴリズムがそのまま動作</span>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- 数式メモ -->
+                    <section class="bg-slate-50 border border-slate-200 rounded-md p-4 flex-1">
+                        <h3 class="text-[12px] font-bold text-slate-700 mb-2">カルマンフィルタ 更新式</h3>
+                        <div class="space-y-1 text-[9px] code-font text-slate-600">
+                            <p><span class="text-slate-400">予測:</span> x̂ₖ⁻ = x̂ₖ₋₁</p>
+                            <p><span class="text-slate-400">予測誤差:</span> Pₖ⁻ = Pₖ₋₁ + Q</p>
+                            <p><span class="text-slate-400">ゲイン:</span> Kₖ = Pₖ⁻ / (Pₖ⁻ + R)</p>
+                            <p><span class="text-slate-400">更新:</span> x̂ₖ = x̂ₖ⁻ + Kₖ(zₖ − x̂ₖ⁻)</p>
+                            <p><span class="text-slate-400">誤差更新:</span> Pₖ = (1 − Kₖ)Pₖ⁻</p>
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-slate-200">
+                            <p class="text-[9px] text-slate-500"><strong>設計思想：</strong>Q ≪ R
+                                とすることで「短時間で急変しない静的傾斜」のノイズ除去に最適化。カルマンゲインが小さく保たれ、安定した推定値を出力する。</p>
+                        </div>
+                    </section>
+                </div>
+            </main>
+
+            <!-- ===== Footer ===== -->
+            <footer
+                class="mt-3 pt-2.5 border-t border-slate-200 flex justify-between items-center text-[8px] text-slate-400 code-font">
+                <p>※ ハイブリッドモードのパラメータは建設現場の環境振動に合わせて要調整。詳細は 07_Optimization_and_Verification_Plan.md を参照。</p>
+                <p>High Precision Tilt Sensor PWA // Accuracy Engineering // MIT License</p>
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>
