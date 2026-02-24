@@ -93,6 +93,15 @@ async function run() {
   });
 
   await context.addInitScript(() => {
+    window.__deviceOrientationListenerCount = 0;
+    const originalAddEventListener = window.addEventListener.bind(window);
+    window.addEventListener = function patchedAddEventListener(type, listener, options) {
+      if (type === 'deviceorientation') {
+        window.__deviceOrientationListenerCount += 1;
+      }
+      return originalAddEventListener(type, listener, options);
+    };
+
     class MockDeviceOrientationEvent extends Event {
       constructor(type, init = {}) {
         super(type);
@@ -101,6 +110,9 @@ async function run() {
       }
 
       static async requestPermission() {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 120);
+        });
         return 'granted';
       }
     }
@@ -153,9 +165,12 @@ async function run() {
     assert(!cachePaths.includes('/docs/INDEX.md'), '非対象ファイルがServiceWorkerキャッシュされています: /docs/INDEX.md');
 
     await page.click('#btn-start');
+    await page.click('#btn-start');
     await page.waitForSelector('#main-screen.active', { timeout: 5000 });
     const twoPointButton = await page.$('#btn-calibrate-2pt');
     assert(Boolean(twoPointButton), '2点キャリブレーションボタンの描画に失敗しました');
+    const deviceOrientationListenerCount = await page.evaluate(() => window.__deviceOrientationListenerCount || 0);
+    assert(deviceOrientationListenerCount === 1, `start多重実行でdeviceorientation listenerが重複登録されました: ${deviceOrientationListenerCount}`);
 
     await page.evaluate(() => {
       window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { beta: 0.4, gamma: 0.2 }));
@@ -228,6 +243,7 @@ async function run() {
       url: baseUrl,
       checks: {
         serviceWorkerCache: 'pass',
+        startIdempotency: 'pass',
         sensorLossRecovery: 'pass',
         settingsSaveErrorToast: 'pass',
         offlineBoot: 'pass',

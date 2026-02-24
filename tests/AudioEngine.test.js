@@ -129,7 +129,7 @@ describe('AudioEngine', () => {
 
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
         const first = speechSynthesisMock.speak.mock.calls[0][0];
-        expect(first.text).toBe('前上がり0.1度、左上がり0.5度');
+        expect(first.text).toBe('ピッチ前上がり0.1度、ロール左上がり0.5度');
         expect(first.lang).toBe('ja-JP');
         expect(first.volume).toBe(0.5);
 
@@ -137,7 +137,13 @@ describe('AudioEngine', () => {
         vi.advanceTimersByTime(10000);
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(2);
         const second = speechSynthesisMock.speak.mock.calls[1][0];
-        expect(second.text).toBe('後ろ上がり0.4度、右上がり2.3度');
+        expect(second.text).toBe('ピッチ後ろ上がり0.4度、ロール右上がり2.3度');
+    });
+
+    it('水平付近の読み上げ文言を適切に返すこと', () => {
+        const engine = new AudioEngine();
+        expect(engine._buildAnnouncement(0, 0)).toBe('ほぼ水平です');
+        expect(engine._buildAnnouncement(0, -0.12)).toBe('ピッチ0.0度（水平）、ロール左上がり0.1度');
     });
 
     it('OFFモードでは読み上げを停止し、追加読み上げを行わないこと', () => {

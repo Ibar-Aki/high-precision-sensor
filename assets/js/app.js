@@ -154,6 +154,7 @@ class App {
     this.toastManager = new ToastManager();
 
     this.isRunning = false;
+    this._starting = false;
     this.animFrameId = null;
     this._orientationHandler = (e) => this._onOrientation(e);
     this._toastEventHandler = (event) => {
@@ -219,84 +220,93 @@ class App {
     if (this.isRunning) {
       return true;
     }
-
-    // iOS 13+ では DeviceOrientationEvent.requestPermission が必要
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const perm = await DeviceOrientationEvent.requestPermission();
-        if (perm !== 'granted') {
-          this._showToast('センサーへのアクセスが拒否されました。Safari設定の「モーションと画面の向きのアクセス」を許可してください。');
-          this._setStatusCode('PERMISSION_DENIED');
-          this._openPermissionHelp('PERMISSION_DENIED');
-          return false;
-        }
-      } catch (e) {
-        this._showToast(`センサー権限リクエストエラー: ${e?.message ?? 'unknown_error'}`);
-        this._setStatusCode('PERMISSION_REQUEST_ERROR');
-        this._openPermissionHelp('PERMISSION_REQUEST_ERROR');
-        return false;
-      }
-    }
-
-    // DeviceOrientation が使えるか確認
-    if (typeof DeviceOrientationEvent === 'undefined') {
-      this._showToast('このデバイス/ブラウザではDeviceOrientation APIがサポートされていません。');
-      this._setStatusCode('SENSOR_UNSUPPORTED');
-      this._openPermissionHelp('SENSOR_UNSUPPORTED');
+    if (this._starting) {
       return false;
     }
+    this._starting = true;
 
-    // Audio初期化（ユーザージェスチャー内で呼ぶ必要あり）
-    this.audio.init();
+    try {
 
-    // センサーイベント登録
-    window.addEventListener('deviceorientation', this._orientationHandler, true);
-
-    // 画面切り替え
-    this._closePermissionHelp();
-    document.getElementById('splash-screen').classList.remove('active');
-    document.getElementById('main-screen').classList.add('active');
-
-    this.isRunning = true;
-    this._sensorLossNotified = false;
-    this._lastSensorEventAt = performance.now();
-    this.ui.setStatus('active', MODE_LABEL.active);
-    this.ui.els.sensorInfo.textContent = 'センサー: DeviceOrientation API (100Hz フィルタ済み)';
-    this._setStatusCode('MEASUREMENT_ACTIVE');
-
-    // 録画ボタン生成
-    if (!document.getElementById('recording-controls')) {
-      this.ui.createRecordingButton(
-        () => {
-          this.logger.start();
-          this._showToast('REC Start');
-        },
-        () => {
-          const exportResult = this.logger.exportCSV();
-          this.logger.stop();
-          if (!exportResult.ok) {
-            if (exportResult.reason === 'no_data') {
-              this._showToast('エクスポートするデータがありません');
-            } else {
-              this._showToast('CSVエクスポートに失敗しました');
-            }
-          } else {
-            this.ui.showDownloadButton(exportResult.filename);
-            this._showToast('CSV Saved');
+      // iOS 13+ では DeviceOrientationEvent.requestPermission が必要
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const perm = await DeviceOrientationEvent.requestPermission();
+          if (perm !== 'granted') {
+            this._showToast('センサーへのアクセスが拒否されました。Safari設定の「モーションと画面の向きのアクセス」を許可してください。');
+            this._setStatusCode('PERMISSION_DENIED');
+            this._openPermissionHelp('PERMISSION_DENIED');
+            return false;
           }
-          const stats = this.logger.getStats();
-          if (stats.dropped > 0) {
-            this._showToast(`ログ上限到達: ${stats.dropped.toLocaleString()}件を削除しました`);
-          }
+        } catch (e) {
+          this._showToast(`センサー権限リクエストエラー: ${e?.message ?? 'unknown_error'}`);
+          this._setStatusCode('PERMISSION_REQUEST_ERROR');
+          this._openPermissionHelp('PERMISSION_REQUEST_ERROR');
+          return false;
         }
-      );
+      }
+
+      // DeviceOrientation が使えるか確認
+      if (typeof DeviceOrientationEvent === 'undefined') {
+        this._showToast('このデバイス/ブラウザではDeviceOrientation APIがサポートされていません。');
+        this._setStatusCode('SENSOR_UNSUPPORTED');
+        this._openPermissionHelp('SENSOR_UNSUPPORTED');
+        return false;
+      }
+
+      // Audio初期化（ユーザージェスチャー内で呼ぶ必要あり）
+      this.audio.init();
+
+      // センサーイベント登録
+      window.addEventListener('deviceorientation', this._orientationHandler, true);
+
+      // 画面切り替え
+      this._closePermissionHelp();
+      document.getElementById('splash-screen').classList.remove('active');
+      document.getElementById('main-screen').classList.add('active');
+
+      this.isRunning = true;
+      this._sensorLossNotified = false;
+      this._lastSensorEventAt = performance.now();
+      this.ui.setStatus('active', MODE_LABEL.active);
+      this.ui.els.sensorInfo.textContent = 'センサー: DeviceOrientation API (100Hz フィルタ済み)';
+      this._setStatusCode('MEASUREMENT_ACTIVE');
+
+      // 録画ボタン生成
+      if (!document.getElementById('recording-controls')) {
+        this.ui.createRecordingButton(
+          () => {
+            this.logger.start();
+            this._showToast('REC Start');
+          },
+          () => {
+            const exportResult = this.logger.exportCSV();
+            this.logger.stop();
+            if (!exportResult.ok) {
+              if (exportResult.reason === 'no_data') {
+                this._showToast('エクスポートするデータがありません');
+              } else {
+                this._showToast('CSVエクスポートに失敗しました');
+              }
+            } else {
+              this.ui.showDownloadButton(exportResult.filename);
+              this._showToast('CSV Saved');
+            }
+            const stats = this.logger.getStats();
+            if (stats.dropped > 0) {
+              this._showToast(`ログ上限到達: ${stats.dropped.toLocaleString()}件を削除しました`);
+            }
+          }
+        );
+      }
+
+      // 描画ループ
+      this._startRenderLoop();
+
+      return true;
+    } finally {
+      this._starting = false;
     }
-
-    // 描画ループ
-    this._startRenderLoop();
-
-    return true;
   }
 
   _onOrientation(e) {
@@ -542,6 +552,7 @@ class App {
 
   destroy() {
     this.isRunning = false;
+    this._starting = false;
     this._clearPendingSettingsSave();
     this.sensor.cancelTwoPointCalibration?.();
     if (this.animFrameId !== null) {

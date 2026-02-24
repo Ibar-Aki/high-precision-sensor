@@ -18,6 +18,7 @@ const SILENCE_RAMP_SECONDS = 0.05;
 const MASTER_VOLUME_RAMP_SECONDS = 0.02;
 const SPEECH_INTERVAL_MS = 10000;
 const SPEECH_LANG = 'ja-JP';
+const ANNOUNCE_LEVEL_EPSILON_DEG = 0.05;
 
 export class AudioEngine {
     constructor() {
@@ -280,11 +281,19 @@ export class AudioEngine {
     }
 
     _buildAnnouncement(pitch, roll) {
+        const absPitch = Math.abs(pitch);
+        const absRoll = Math.abs(roll);
+        if (absPitch < ANNOUNCE_LEVEL_EPSILON_DEG && absRoll < ANNOUNCE_LEVEL_EPSILON_DEG) {
+            return 'ほぼ水平です';
+        }
+
         const pitchLabel = pitch < 0 ? '前上がり' : '後ろ上がり';
         const rollLabel = roll < 0 ? '左上がり' : '右上がり';
         const pitchValue = Math.abs(pitch).toFixed(1);
         const rollValue = Math.abs(roll).toFixed(1);
-        return `${pitchLabel}${pitchValue}度、${rollLabel}${rollValue}度`;
+        const pitchText = absPitch < ANNOUNCE_LEVEL_EPSILON_DEG ? `${pitchValue}度（水平）` : `${pitchLabel}${pitchValue}度`;
+        const rollText = absRoll < ANNOUNCE_LEVEL_EPSILON_DEG ? `${rollValue}度（水平）` : `${rollLabel}${rollValue}度`;
+        return `ピッチ${pitchText}、ロール${rollText}`;
     }
 
     destroy() {

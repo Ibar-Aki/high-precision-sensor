@@ -175,6 +175,24 @@ async function run() {
     await page.click('#enable-sensor-btn');
     await page.waitForSelector('#app-screen.screen.active', { timeout: 5000 });
 
+    await page.evaluate(() => {
+      window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { beta: 0.6, gamma: 0.2 }));
+    });
+    await page.waitForTimeout(250);
+    const pitchBeforePagehide = await page.textContent('#pitch-value');
+    await page.evaluate(() => {
+      window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+      for (let i = 0; i < 20; i++) {
+        window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { beta: 6.0, gamma: -2.0 }));
+      }
+    });
+    await page.waitForTimeout(350);
+    const pitchAfterPagehide = await page.textContent('#pitch-value');
+    assert(
+      pitchBeforePagehide !== pitchAfterPagehide,
+      `pagehide(persisted) 後に計測更新が停止しました: before=${pitchBeforePagehide}, after=${pitchAfterPagehide}`
+    );
+
     await page.click('#start-measure-btn');
     await page.evaluate(() => {
       for (let i = 0; i < 220; i++) {
@@ -223,6 +241,7 @@ async function run() {
       url: baseUrl,
       checks: {
         serviceWorkerCache: 'pass',
+        pagehidePersistedRecovery: 'pass',
         autoFinalizeMeasurement: 'pass',
         manualFinalizeMeasurement: 'pass',
         offlineBoot: 'pass'

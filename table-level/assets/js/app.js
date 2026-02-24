@@ -55,7 +55,11 @@ class TableLevelApp {
     this._orientationHandler = (event) => this._onOrientation(event);
     this._resizeHandler = () => this._updateOrientationGuard();
     this._orientationChangeHandler = () => this._updateOrientationGuard();
-    this._destroyHandler = () => this.destroy();
+    this._pageHideHandler = (event) => {
+      if (event?.persisted) return;
+      this.destroy();
+    };
+    this._beforeUnloadHandler = () => this.destroy();
     this._openPermissionHelpHandler = () => this._showPermissionHelp('PERMISSION_HELP_MANUAL');
     this._closePermissionHelpHandler = () => this._hidePermissionHelp();
 
@@ -167,8 +171,8 @@ class TableLevelApp {
 
     window.addEventListener('resize', this._resizeHandler);
     window.addEventListener('orientationchange', this._orientationChangeHandler);
-    window.addEventListener('pagehide', this._destroyHandler);
-    window.addEventListener('beforeunload', this._destroyHandler);
+    window.addEventListener('pagehide', this._pageHideHandler);
+    window.addEventListener('beforeunload', this._beforeUnloadHandler);
   }
 
   async _enableSensorAccess() {
@@ -636,8 +640,8 @@ class TableLevelApp {
 
     window.removeEventListener('resize', this._resizeHandler);
     window.removeEventListener('orientationchange', this._orientationChangeHandler);
-    window.removeEventListener('pagehide', this._destroyHandler);
-    window.removeEventListener('beforeunload', this._destroyHandler);
+    window.removeEventListener('pagehide', this._pageHideHandler);
+    window.removeEventListener('beforeunload', this._beforeUnloadHandler);
     this.els.openPermissionHelpButton?.removeEventListener('click', this._openPermissionHelpHandler);
     this.els.closePermissionHelpButton?.removeEventListener('click', this._closePermissionHelpHandler);
   }
