@@ -122,7 +122,7 @@ async function run() {
     await page.reload({ waitUntil: 'networkidle' });
 
     const cachePaths = await page.evaluate(async () => {
-      const cache = await caches.open('tilt-sensor-v5');
+      const cache = await caches.open('tilt-sensor-v6-static');
       const keys = await cache.keys();
       return keys.map((req) => new URL(req.url).pathname);
     });
@@ -139,6 +139,7 @@ async function run() {
       '/shared/js/KalmanFilter1D.js',
       '/shared/js/HybridStaticUtils.js',
       '/assets/js/modules/SettingsManager.js',
+      '/assets/js/modules/SoundSettingsVisibility.js',
       '/assets/icons/icon-192.svg',
       '/assets/icons/icon-512.svg',
       '/manifest.json'

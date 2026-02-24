@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'table-level-v1.1.1';
+const CACHE_VERSION = 'table-level-v1.1.2';
 const CACHE_PREFIX = 'table-level-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
@@ -12,8 +12,8 @@ const APP_SHELL = [
   './assets/js/sensor.js',
   './assets/js/kalman.js',
   './assets/js/hybrid-static-utils.js',
-  '../shared/js/KalmanFilter1D.js',
-  '../shared/js/HybridStaticUtils.js',
+  '/shared/js/KalmanFilter1D.js',
+  '/shared/js/HybridStaticUtils.js',
   './assets/js/calculator.js',
   './assets/js/voice.js',
   './assets/js/i18n.js',
@@ -45,38 +45,41 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
   const isHtml = request.headers.get('accept')?.includes('text/html');
 
   if (isHtml) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok && response.type === 'basic') {
-            const cloned = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, cloned));
-          }
-          return response;
-        })
-        .catch(async () => {
-          const cacheHit = await caches.match(request);
-          if (cacheHit) return cacheHit;
-          return caches.match('./offline.html');
-        })
-    );
+    event.respondWith(networkFirstHtml(request));
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cacheHit) => {
-      if (cacheHit) return cacheHit;
-      return fetch(request).then((response) => {
-        if (response.ok && response.type === 'basic') {
-          const cloned = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(request, cloned));
-        }
-        return response;
-      });
-    })
-  );
+  event.respondWith(cacheFirstAsset(request));
 });
+
+async function networkFirstHtml(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok && response.type === 'basic') {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cacheHit = await caches.match(request);
+    if (cacheHit) return cacheHit;
+    return caches.match('./offline.html');
+  }
+}
+
+async function cacheFirstAsset(request) {
+  const cacheHit = await caches.match(request);
+  if (cacheHit) return cacheHit;
+  const response = await fetch(request);
+  if (response.ok && response.type === 'basic') {
+    const cache = await caches.open(STATIC_CACHE);
+    cache.put(request, response.clone());
+  }
+  return response;
+}

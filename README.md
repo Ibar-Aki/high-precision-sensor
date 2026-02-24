@@ -25,14 +25,18 @@ High-precision-sensor/
 ├── assets/                         # High Precision Tilt Sensor の実装
 ├── table-level/                    # Table Level Guide の実装
 ├── shared/js/                      # 両アプリ共通モジュール
+│   ├── KalmanFilter1D.js           #   1Dカルマンフィルタ
+│   └── HybridStaticUtils.js        #   静止判定・バッファ管理ユーティリティ
 ├── docs/
 │   ├── INDEX.md
 │   ├── high-precision-sensor/      # 高精度傾斜計のドキュメント
 │   └── table-level/                # 机水平ガイドのドキュメント
 ├── tests/
-│   ├── *.test.js
+│   ├── *.test.js                   # ユニットテスト (47件)
 │   ├── e2e-offline-smoke.mjs
 │   └── e2e-table-level-smoke.mjs
+├── .editorconfig                   # コードスタイル定義
+├── .gitattributes                  # Git 改行コード制御
 └── sw.js
 ```
 

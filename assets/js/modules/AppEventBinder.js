@@ -1,3 +1,5 @@
+import { refreshSoundSettingsVisibility } from './SoundSettingsVisibility.js';
+
 export class AppEventBinder {
     constructor({ sensor, audio, ui, onStart, onSaveSettings, onToast, onStorageError }) {
         this.sensor = sensor;
@@ -12,18 +14,6 @@ export class AppEventBinder {
 
     bind() {
         this.destroy();
-
-        const refreshSoundSettingsVisibility = () => {
-            const isNormalOutput = this.audio.outputType === 'normal';
-            const normalSoundSettings = document.getElementById('normal-sound-settings');
-            if (normalSoundSettings) {
-                normalSoundSettings.style.display = isNormalOutput ? 'block' : 'none';
-            }
-            const thresholdSetting = document.getElementById('threshold-setting');
-            if (thresholdSetting) {
-                thresholdSetting.style.display = isNormalOutput && this.audio.mode === 'threshold' ? 'block' : 'none';
-            }
-        };
 
         this._addListener(document.getElementById('btn-start'), 'click', () => this.onStart?.());
 
@@ -162,7 +152,7 @@ export class AppEventBinder {
                 btn.classList.add('active');
                 const outputType = btn.dataset.outputType;
                 this.audio.setOutputType(outputType);
-                refreshSoundSettingsVisibility();
+                refreshSoundSettingsVisibility(this.audio);
                 this.onSaveSettings?.();
             });
         });
@@ -173,12 +163,12 @@ export class AppEventBinder {
                 btn.classList.add('active');
                 const mode = btn.dataset.soundMode;
                 this.audio.setMode(mode);
-                refreshSoundSettingsVisibility();
+                refreshSoundSettingsVisibility(this.audio);
                 this.onSaveSettings?.();
             });
         });
 
-        refreshSoundSettingsVisibility();
+        refreshSoundSettingsVisibility(this.audio);
     }
 
     destroy() {

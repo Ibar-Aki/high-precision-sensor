@@ -23,12 +23,14 @@
 1. `table-level/assets/js/app.js`
    - UI制御、測定フロー管理、設定保存/復元
 2. `table-level/assets/js/sensor.js`
-   - Kalman/EMA/静止判定処理
-3. `table-level/assets/js/calculator.js`
+   - Kalman/EMA/共通静止判定処理（`shared/js/HybridStaticUtils.js` を利用）
+3. `table-level/assets/js/hybrid-static-utils.js`
+   - 静止判定・バッファ管理の共通ユーティリティ（`shared/` からの再エクスポート）
+4. `table-level/assets/js/calculator.js`
    - ボルト回転量算出ロジック
-4. `table-level/assets/js/settings.js`
+5. `table-level/assets/js/settings.js`
    - 設定のサニタイズと永続化
-5. `table-level/assets/js/voice.js`
+6. `table-level/assets/js/voice.js`
    - 読み上げ音声の制御
 
 ## 4. モード遷移

@@ -1,6 +1,6 @@
 # 高精度傾斜角センサー 開発ガイド
 
-更新日: 2026-02-18
+更新日: 2026-02-24
 
 ## 1. 文書概要
 
@@ -12,11 +12,15 @@
 |------|------|
 | `index.html` | 画面構成と設定パネル定義 |
 | `assets/css/style.css` | UI状態表示、レスポンシブスタイル |
-| `assets/js/app.js` | アプリ統合、設定保存復元、状態表示制御 |
+| `assets/js/app.js` | アプリ統合、設定スキーマ駆動、状態表示制御 |
 | `assets/js/modules/SensorEngine.js` | Kalman/EMA/Deadzone + Static Average 本体 |
+| `assets/js/modules/HybridStaticUtils.js` | 静止判定・バッファ管理の共通ユーティリティ（re-export） |
+| `shared/js/HybridStaticUtils.js` | 静止判定・バッファ管理の共通ロジック実体（106行） |
 | `assets/js/modules/AppEventBinder.js` | UIイベントとセンサーパラメータの接続 |
 | `assets/js/modules/UIManager.js` | 数値表示、ステータス更新、描画 |
-| `tests/*.test.js` | ユニットテスト |
+| `.editorconfig` | コードスタイル定義（改行コード LF 統一等） |
+| `.gitattributes` | Git 改行コード制御 |
+| `tests/*.test.js` | ユニットテスト（47件） |
 | `tests/e2e-offline-smoke.mjs` | オフライン起動と主要動作のE2Eスモーク |
 
 ## 3. ハイブリッド処理フロー
@@ -55,12 +59,18 @@ graph TD
 | `soundMode` | `data-sound-mode` | `continuous` |
 | `soundThreshold` | `sound-threshold` | `1.0` |
 | `masterVolume` | `master-volume` | `0.5` |
+| `decimalPlaces` | `decimal-places` | `3` |
+| `levelSens` | `level-sensitivity` | `15` |
+
+> 設定の保存・復元は `app.js` の `SETTINGS_SAVE_SCHEMA` / `SETTINGS_APPLY_SCHEMA` で宣言的に管理されており、設定追加は1箇所のスキーマ定義追加で完結する。
 
 ## 6. ローカル検証
 
-1. ユニットテスト: `npm test -- --run`
-2. E2Eスモーク: `npm run test:e2e-smoke`
-3. 手動確認:
+1. ユニットテスト: `npm test -- --run`（47件）
+2. E2Eスモーク（メイン）: `npm run test:e2e-smoke`
+3. E2Eスモーク（table-level）: `npm run test:e2e:table-level`
+4. 全E2E一括: `npm run test:e2e:all`
+5. 手動確認:
    - センサー入力継続時に `LOCKING...` / `MEASURING` へ遷移すること
    - 入力停止時に `センサー信号待ち` へ遷移すること
    - 再入力で状態復帰すること

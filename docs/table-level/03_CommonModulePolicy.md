@@ -8,7 +8,9 @@
 
 `High Precision Tilt Sensor` と `Table Level Guide` は同種の数値処理を持つため、重複実装を減らして回帰リスクを下げる。
 
-## 2. 第一段の共通化対象
+## 2. 共通化済みモジュール
+
+### 2.1 KalmanFilter1D（第一段）
 
 1. `shared/js/KalmanFilter1D.js`
    - 両アプリの1Dカルマンフィルタ実装を統合
@@ -16,6 +18,18 @@
    - `assets/js/modules/KalmanFilter1D.js`
    - `table-level/assets/js/kalman.js`
    - 既存 import 互換を保つため、上記2ファイルは `shared` から再エクスポートする
+
+### 2.2 HybridStaticUtils（第二段、2026-02-24 実施）
+
+1. `shared/js/HybridStaticUtils.js`（106行）
+   - 静止判定（分散計算）、動きウィンドウ管理、静止バッファ管理、compactロジック、`toPositiveInt` を統合
+   - 状態オブジェクトを引数として受け取る設計により、異なるクラス（`SensorEngine` / `TableLevelSensor`）が同一ロジックを共有
+2. 各アプリ側ラッパー
+   - `assets/js/modules/HybridStaticUtils.js`
+   - `table-level/assets/js/hybrid-static-utils.js`
+   - KalmanFilter1D と同じく再エクスポート方式
+3. テスト
+   - `tests/HybridStaticUtils.test.js`（94行）で共通ロジックを直接検証
 
 ## 3. 運用ルール
 
@@ -26,6 +40,5 @@
 
 ## 4. 次段候補
 
-1. 静止判定ユーティリティ（分散計算・リングバッファ処理）
-2. 設定サニタイズ共通ヘルパー
-3. 方向ラベルや角度フォーマットの共通化
+1. 設定サニタイズ共通ヘルパー（`_storageErrorReason()` 等の重複解消）
+2. 方向ラベルや角度フォーマットの共通化

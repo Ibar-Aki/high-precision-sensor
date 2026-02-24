@@ -239,14 +239,14 @@ if (this.logs.length >= this.maxRecords) {
 
 ### 🔸 中優先
 
-3. UIManager/AudioEngine 単体テスト追加  
-4. manifest にPNG/maskableアイコン追加
+1. UIManager/AudioEngine 単体テスト追加  
+2. manifest にPNG/maskableアイコン追加
 
 ### 🔹 低優先
 
-5. aria-label整備  
-6. AudioEngine定数化  
-7. JSDoc/TypeScript段階導入
+1. aria-label整備  
+2. AudioEngine定数化  
+3. JSDoc/TypeScript段階導入
 
 ---
 
@@ -282,6 +282,46 @@ if (this.logs.length >= this.maxRecords) {
 ### 今回見送り（別タスク）
 
 - M1: Service Worker プリキャッシュ一覧の自動生成化（Workbox等）
-- M2: `UIManager` / `AudioEngine` の単体テスト拡充
 - M3: manifest への PNG / maskable アイコン追加
 - L3: JSDoc / TypeScript 段階導入
+
+---
+
+## 9. 追加対応結果（2026-02-24）
+
+**更新日**: 2026-02-24
+
+辛口レビュー第2回（2026-02-24）での指摘を受け、以下を追加対応。
+
+### 完了
+
+- **H1 追加改善**: `SETTINGS_APPLY_SCHEMA` / `SETTINGS_SAVE_SCHEMA` 導入
+  - `_applySettings()` の113行神メソッドを宣言的スキーマ方式に全面書き換え。設定追加が1箇所で完結するように。
+- **H2 追加改善**: `DataLogger` を固定長リングバッファ（`_buffer` + `_head` + `_count`）に書き換え
+  - `exportCSV()` の戻り値を `{ ok, reason }` パターンに統一、`alert()` を全排除。
+  - `revokeObjectURL` を `_scheduleRevokeObjectURL()` で遅延化し、ダウンロード前のrevoke問題を解消。
+- **M2 部分改善**: テスト追加
+  - `tests/HybridStaticUtils.test.js`（94行）を新設し共通ロジックのカバレッジ確保。
+  - `AudioEngine.test.js` に `destroy` 時の `ctx.close()` 失敗ハンドリングテストを追加。
+  - `DataLogger.test.js` に空ログ時の `no_data` 理由コード返却テストを追加。
+- **新規: コード重複解消**
+  - `shared/js/HybridStaticUtils.js`（106行）を新設し、2アプリ間で200行以上重複していた静止判定ロジックを共通化。
+  - `SensorEngine.js` 471→422行、`sensor.js` 291→226行に削減。
+- **新規: `AudioEngine.destroy()`** の `ctx.close()` を `Promise.resolve(ctx.close()).catch()` で非同期対応。
+- **新規: table-level `app.js`** に `destroy()` メソッド追加。`cancelAnimationFrame` による rAF キャンセル機構を実装。
+- **新規: `alert()` 全排除** — アプリ全体で `_showToast()` に統一。
+- **新規: `.editorconfig` + `.gitattributes`** 追加で改行コード混在を防止。
+- **新規: `package.json`** — `description` 修正、`keywords` 追加、`author` 記入、不適切な `main` 削除。
+
+### 今回見送り
+
+- SensorEngine 内の `_compactMotionWindowIfNeeded` / `_compactStaticBuffersIfNeeded` デッドコード削除（軽微）
+- `_storageErrorReason()` の2箇所重複解消（軽微）
+- 既存ファイルの改行コード一括統一（`git add --renormalize .` で対応可能）
+- SW キャッシュ戦略のアプリ間統一
+
+### スコア更新
+
+**82/100 → 88/100**
+
+改善理由: コード重複の最大の技術的負債が解消、設定管理のスキーマ駆動化、テスト追加、エラーハンドリング統一。残存はSWキャッシュ戦略の不統一と軽微なデッドコード。

@@ -6,6 +6,7 @@ import { SettingsManager } from './modules/SettingsManager.js';
 import { ToastManager } from './modules/ToastManager.js';
 import { LifecycleManager } from './modules/LifecycleManager.js';
 import { AppEventBinder } from './modules/AppEventBinder.js';
+import { refreshSoundSettingsVisibility } from './modules/SoundSettingsVisibility.js';
 
 const SETTINGS_SAVE_SCHEMA = [
   { key: 'emaAlpha', read: (app) => app.sensor.emaAlpha },
@@ -187,6 +188,7 @@ class App {
 
     // 初期設定適用（バインド後に行うことでスライダー等のUIにも反映）
     this._applySettings();
+    this._registerServiceWorker();
   }
 
   /* ---------- iOS権限 & 起動 ---------- */
@@ -459,14 +461,15 @@ class App {
   }
 
   _refreshSoundSettingsVisibility() {
-    const isNormalOutput = this.audio.outputType === 'normal';
-    const normalSoundSettings = document.getElementById('normal-sound-settings');
-    if (normalSoundSettings) {
-      normalSoundSettings.style.display = isNormalOutput ? 'block' : 'none';
-    }
-    const thresholdSetting = document.getElementById('threshold-setting');
-    if (thresholdSetting) {
-      thresholdSetting.style.display = isNormalOutput && this.audio.mode === 'threshold' ? 'block' : 'none';
+    refreshSoundSettingsVisibility(this.audio);
+  }
+
+  async _registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      await navigator.serviceWorker.register('./sw.js', { scope: './' });
+    } catch {
+      // service worker登録失敗時は無視して継続
     }
   }
 
