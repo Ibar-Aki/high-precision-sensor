@@ -227,6 +227,64 @@ body {
   transform: scale(0.96);
 }
 
+.btn-secondary {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.25rem;
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: var(--bg-glass);
+  cursor: pointer;
+}
+
+.screen-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(5, 8, 15, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.screen-modal.active {
+  display: flex;
+}
+
+.permission-help-card {
+  width: 100%;
+  max-width: 460px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.permission-help-card h2 {
+  font-size: 1.1rem;
+}
+
+.permission-help-card ol {
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.permission-help-reason {
+  font-family: var(--font-mono);
+  color: var(--accent-orange);
+  font-size: 0.72rem;
+}
+
 .btn-glow {
   box-shadow: 0 0 30px rgba(0, 212, 255, 0.25), 0 0 60px rgba(123, 47, 247, 0.15);
   animation: glowPulse 2s ease-in-out infinite;
@@ -633,6 +691,31 @@ body {
 
 .btn-action-wide {
   grid-column: 1 / -1;
+}
+
+.status-panel {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.status-panel h3 {
+  font-size: 0.78rem;
+  color: var(--accent-cyan);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.status-panel p {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.status-panel code {
+  font-family: var(--font-mono);
+  color: var(--accent-orange);
 }
 
 /* ============================

@@ -172,7 +172,7 @@ async function run() {
     await page.waitForTimeout(120);
     const staticStatus = await page.textContent('#sensor-status .status-text');
     assert(
-      staticStatus?.includes('LOCKING...') || staticStatus?.includes('MEASURING'),
+      staticStatus?.includes('安定化中') || staticStatus?.includes('確定値'),
       `静止モード遷移を確認できません: ${staticStatus}`
     );
 

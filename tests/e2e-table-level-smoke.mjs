@@ -183,7 +183,7 @@ async function run() {
     });
     await page.waitForFunction(() => {
       const mode = document.getElementById('measurement-mode');
-      return mode && mode.textContent === 'measuring';
+      return mode && mode.textContent === '確定値';
     }, null, { timeout: 7000 });
 
     await page.waitForFunction(() => {

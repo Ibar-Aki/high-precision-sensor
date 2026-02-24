@@ -18,6 +18,20 @@
       <h1>机の水平ガイド</h1>
       <p>iPhoneセンサーで傾きを計測し、4隅のボルト調整量を案内します。</p>
       <button id="enable-sensor-btn" class="btn primary">センサーを有効化</button>
+      <button id="open-permission-help-btn" class="btn">許可手順を表示</button>
+    </div>
+  </section>
+
+  <section id="permission-help-screen" class="permission-help-screen">
+    <div class="card">
+      <h2>センサー許可が必要です</h2>
+      <ol>
+        <li>iPhoneの「設定」を開く</li>
+        <li>「Safari」→「モーションと画面の向きのアクセス」を許可</li>
+        <li>この画面に戻り再度「センサーを有効化」を押す</li>
+      </ol>
+      <p id="permission-help-code" class="permission-help-code">状態コード: PERMISSION_HELP_READY</p>
+      <button id="close-permission-help-btn" class="btn primary" type="button">閉じる</button>
     </div>
   </section>
 
@@ -45,6 +59,10 @@
 
         <div id="level-banner" class="level-banner">水平達成</div>
         <div id="warning-box" class="warning-box"></div>
+        <div class="support-meta">
+          <div>セッションID: <code id="session-id">-</code></div>
+          <div>最終状態コード: <code id="status-code">INIT</code></div>
+        </div>
       </div>
 
       <div class="card table-card">

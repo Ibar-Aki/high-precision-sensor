@@ -8,6 +8,20 @@ import { LifecycleManager } from './modules/LifecycleManager.js';
 import { AppEventBinder } from './modules/AppEventBinder.js';
 import { refreshSoundSettingsVisibility } from './modules/SoundSettingsVisibility.js';
 
+const MODE_LABEL = {
+  active: '計測中',
+  locking: '安定化中',
+  measuring: '確定値'
+};
+
+function createSessionId(prefix = 'HS') {
+  const now = new Date();
+  const pad = (v) => String(v).padStart(2, '0');
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const random = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0').toUpperCase();
+  return `${prefix}-${stamp}-${random}`;
+}
+
 const SETTINGS_SAVE_SCHEMA = [
   { key: 'emaAlpha', read: (app) => app.sensor.emaAlpha },
   { key: 'kalmanQ', read: (app) => app.sensor.kfPitch.q },
@@ -155,6 +169,11 @@ class App {
     this._settingsErrorToastIntervalMs = 3000;
     this._saveSettingsTimerId = null;
     this._saveSettingsDebounceMs = 200;
+    this._lastStatusCode = 'INIT';
+    this._lastMeasurementMode = null;
+    this._sessionId = createSessionId();
+    this._permissionHelpOpenHandler = () => this._openPermissionHelp('PERMISSION_HELP_MANUAL');
+    this._permissionHelpCloseHandler = () => this._closePermissionHelp();
 
     const settingsResult = this.settingsManager.load();
     this.settings = settingsResult.value ?? {};
@@ -171,7 +190,8 @@ class App {
       onStart: () => this.start(),
       onSaveSettings: () => this._requestSaveSettings(),
       onToast: (message) => this._showToast(message),
-      onStorageError: (operation, reason) => this._showStorageErrorToast(operation, reason)
+      onStorageError: (operation, reason) => this._showStorageErrorToast(operation, reason),
+      onStatusCode: (code) => this._setStatusCode(code)
     });
     this.eventBinder.bind();
 
@@ -188,6 +208,9 @@ class App {
 
     // 初期設定適用（バインド後に行うことでスライダー等のUIにも反映）
     this._applySettings();
+    this._bindPermissionHelp();
+    this.ui.setSessionId(this._sessionId);
+    this._setStatusCode('INIT');
     this._registerServiceWorker();
   }
 
@@ -204,10 +227,14 @@ class App {
         const perm = await DeviceOrientationEvent.requestPermission();
         if (perm !== 'granted') {
           this._showToast('センサーへのアクセスが拒否されました。Safari設定の「モーションと画面の向きのアクセス」を許可してください。');
+          this._setStatusCode('PERMISSION_DENIED');
+          this._openPermissionHelp('PERMISSION_DENIED');
           return false;
         }
       } catch (e) {
         this._showToast(`センサー権限リクエストエラー: ${e?.message ?? 'unknown_error'}`);
+        this._setStatusCode('PERMISSION_REQUEST_ERROR');
+        this._openPermissionHelp('PERMISSION_REQUEST_ERROR');
         return false;
       }
     }
@@ -215,6 +242,8 @@ class App {
     // DeviceOrientation が使えるか確認
     if (typeof DeviceOrientationEvent === 'undefined') {
       this._showToast('このデバイス/ブラウザではDeviceOrientation APIがサポートされていません。');
+      this._setStatusCode('SENSOR_UNSUPPORTED');
+      this._openPermissionHelp('SENSOR_UNSUPPORTED');
       return false;
     }
 
@@ -225,14 +254,16 @@ class App {
     window.addEventListener('deviceorientation', this._orientationHandler, true);
 
     // 画面切り替え
+    this._closePermissionHelp();
     document.getElementById('splash-screen').classList.remove('active');
     document.getElementById('main-screen').classList.add('active');
 
     this.isRunning = true;
     this._sensorLossNotified = false;
     this._lastSensorEventAt = performance.now();
-    this.ui.setStatus('active', '計測中');
+    this.ui.setStatus('active', MODE_LABEL.active);
     this.ui.els.sensorInfo.textContent = 'センサー: DeviceOrientation API (100Hz フィルタ済み)';
+    this._setStatusCode('MEASUREMENT_ACTIVE');
 
     // 録画ボタン生成
     if (!document.getElementById('recording-controls')) {
@@ -340,15 +371,20 @@ class App {
 
   _updateMeasurementStatus() {
     const mode = this.sensor.getMeasurementMode?.() ?? 'active';
+    const modeChanged = this._lastMeasurementMode !== mode;
+    this._lastMeasurementMode = mode;
     if (mode === 'measuring') {
-      this.ui.setStatus('active', 'MEASURING');
+      this.ui.setStatus('active', MODE_LABEL.measuring);
+      if (modeChanged) this._setStatusCode('MEASUREMENT_STABLE');
       return;
     }
     if (mode === 'locking') {
-      this.ui.setStatus('inactive', 'LOCKING...');
+      this.ui.setStatus('inactive', MODE_LABEL.locking);
+      if (modeChanged) this._setStatusCode('MEASUREMENT_STABILIZING');
       return;
     }
-    this.ui.setStatus('active', '計測中');
+    this.ui.setStatus('active', MODE_LABEL.active);
+    if (modeChanged) this._setStatusCode('MEASUREMENT_ACTIVE');
   }
 
   _handleSensorLoss() {
@@ -358,14 +394,16 @@ class App {
     this._sensorLossNotified = true;
     this.ui.setStatus('inactive', 'センサー信号待ち');
     this._showToast('センサーデータを受信できません');
+    this._setStatusCode('SENSOR_SIGNAL_LOST');
   }
 
   _handleSensorRecovery() {
     if (!this._sensorLossNotified) return;
 
     this._sensorLossNotified = false;
-    this.ui.setStatus('active', '計測中');
+    this.ui.setStatus('active', MODE_LABEL.active);
     this._showToast('センサーデータ受信を再開しました');
+    this._setStatusCode('SENSOR_SIGNAL_RECOVERED');
   }
 
   /* ---------- トースト通知 ---------- */
@@ -375,6 +413,35 @@ class App {
 
   _showStorageErrorToast(operation, reason) {
     this.toastManager.showStorageError(operation, reason);
+    this._setStatusCode(`STORAGE_ERROR_${String(reason ?? 'unknown').toUpperCase()}`);
+  }
+
+  _bindPermissionHelp() {
+    document.getElementById('btn-open-permission-help')?.addEventListener('click', this._permissionHelpOpenHandler);
+    document.getElementById('btn-close-permission-help')?.addEventListener('click', this._permissionHelpCloseHandler);
+  }
+
+  _openPermissionHelp(reasonCode) {
+    const screen = document.getElementById('permission-help-screen');
+    if (!screen) return;
+    const reason = document.getElementById('permission-help-reason');
+    if (reason) reason.textContent = `状態コード: ${reasonCode}`;
+    this._setStatusCode(reasonCode);
+    screen.classList.add('active');
+    screen.setAttribute('aria-hidden', 'false');
+  }
+
+  _closePermissionHelp() {
+    const screen = document.getElementById('permission-help-screen');
+    if (!screen) return;
+    screen.classList.remove('active');
+    screen.setAttribute('aria-hidden', 'true');
+  }
+
+  _setStatusCode(code) {
+    if (!code || code === this._lastStatusCode) return;
+    this._lastStatusCode = code;
+    this.ui.setStatusCode(code);
   }
 
   /* ---------- 設定の永続化 ---------- */
@@ -483,6 +550,8 @@ class App {
     }
     window.removeEventListener('deviceorientation', this._orientationHandler, true);
     window.removeEventListener('app:toast', this._toastEventHandler);
+    document.getElementById('btn-open-permission-help')?.removeEventListener('click', this._permissionHelpOpenHandler);
+    document.getElementById('btn-close-permission-help')?.removeEventListener('click', this._permissionHelpCloseHandler);
     this.eventBinder?.destroy();
     this.lifecycleManager?.destroy();
     this.audio.destroy?.();

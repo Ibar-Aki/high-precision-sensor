@@ -13,6 +13,19 @@ const BOLT_PITCH_MAP = {
 const MIN_SAMPLES_TO_FINALIZE = 10;
 const ACTIVE_LOOP_INTERVAL_MS = 1000 / 30;
 const IDLE_LOOP_INTERVAL_MS = 120;
+const MODE_LABEL = {
+  active: '計測中',
+  locking: '安定化中',
+  measuring: '確定値'
+};
+
+function createSessionId(prefix = 'TL') {
+  const now = new Date();
+  const pad = (v) => String(v).padStart(2, '0');
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const random = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0').toUpperCase();
+  return `${prefix}-${stamp}-${random}`;
+}
 
 class TableLevelApp {
   constructor() {
@@ -37,10 +50,14 @@ class TableLevelApp {
     this._lastLoopUpdateAt = 0;
     this._loopFrameId = null;
     this._destroyed = false;
+    this._lastStatusCode = 'INIT';
+    this._sessionId = createSessionId();
     this._orientationHandler = (event) => this._onOrientation(event);
     this._resizeHandler = () => this._updateOrientationGuard();
     this._orientationChangeHandler = () => this._updateOrientationGuard();
     this._destroyHandler = () => this.destroy();
+    this._openPermissionHelpHandler = () => this._showPermissionHelp('PERMISSION_HELP_MANUAL');
+    this._closePermissionHelpHandler = () => this._hidePermissionHelp();
 
     this._bindElements();
     this._bindEvents();
@@ -49,6 +66,8 @@ class TableLevelApp {
     this._toggleBoltCustomInput();
     this._toggleManualConfirm(false);
     this._updateOrientationGuard();
+    this._setSessionInfo(this._sessionId);
+    this._setStatusCode('INIT');
 
     if (!loaded.ok) {
       this._setStatus('warning', '設定の読み込みに失敗したため既定値を使用します。');
@@ -75,6 +94,10 @@ class TableLevelApp {
       instructionList: byId('instruction-list'),
       settingsForm: byId('settings-form'),
       enableSensorButton: byId('enable-sensor-btn'),
+      openPermissionHelpButton: byId('open-permission-help-btn'),
+      closePermissionHelpButton: byId('close-permission-help-btn'),
+      permissionHelpScreen: byId('permission-help-screen'),
+      permissionHelpCode: byId('permission-help-code'),
       startMeasureButton: byId('start-measure-btn'),
       remeasureButton: byId('remeasure-btn'),
       manualConfirmButton: byId('manual-confirm-btn'),
@@ -105,12 +128,16 @@ class TableLevelApp {
       legFL: byId('leg-FL'),
       legFR: byId('leg-FR'),
       legBL: byId('leg-BL'),
-      legBR: byId('leg-BR')
+      legBR: byId('leg-BR'),
+      sessionId: byId('session-id'),
+      statusCode: byId('status-code')
     };
   }
 
   _bindEvents() {
     this.els.enableSensorButton.addEventListener('click', () => this._enableSensorAccess());
+    this.els.openPermissionHelpButton.addEventListener('click', this._openPermissionHelpHandler);
+    this.els.closePermissionHelpButton.addEventListener('click', this._closePermissionHelpHandler);
     this.els.startMeasureButton.addEventListener('click', () => this.startMeasurement());
     this.els.remeasureButton.addEventListener('click', () => this.startMeasurement());
     this.els.manualConfirmButton.addEventListener('click', () => this._confirmMeasurementManually());
@@ -147,6 +174,8 @@ class TableLevelApp {
   async _enableSensorAccess() {
     if (typeof DeviceOrientationEvent === 'undefined') {
       this._setStatus('error', 'この端末ではセンサーAPIが利用できません。');
+      this._setStatusCode('SENSOR_UNSUPPORTED');
+      this._showPermissionHelp('SENSOR_UNSUPPORTED');
       return;
     }
 
@@ -155,10 +184,14 @@ class TableLevelApp {
         const result = await DeviceOrientationEvent.requestPermission();
         if (result !== 'granted') {
           this._setStatus('error', 'センサー許可が必要です。Safariの設定を確認してください。');
+          this._setStatusCode('PERMISSION_DENIED');
+          this._showPermissionHelp('PERMISSION_DENIED');
           return;
         }
       } catch (error) {
         this._setStatus('error', `センサー許可でエラー: ${error.message}`);
+        this._setStatusCode('PERMISSION_REQUEST_ERROR');
+        this._showPermissionHelp('PERMISSION_REQUEST_ERROR');
         return;
       }
     }
@@ -169,9 +202,11 @@ class TableLevelApp {
     }
 
     this.permissionGranted = true;
+    this._hidePermissionHelp();
     this.els.splash.classList.remove('active');
     this.els.app.classList.add('active');
     this._setStatus('active', 'センサー有効化済み。計測開始してください。');
+    this._setStatusCode('SENSOR_READY');
   }
 
   _onOrientation(event) {
@@ -199,6 +234,7 @@ class TableLevelApp {
     this.sensor.resetMeasurementState();
     this._toggleManualConfirm(false);
     this._setStatus('active', '計測中... 端末を動かさず待機してください。');
+    this._setStatusCode('MEASUREMENT_ACTIVE');
 
     this.els.warningBox.textContent = '';
     this.els.levelBanner.classList.remove('visible');
@@ -345,7 +381,7 @@ class TableLevelApp {
 
     this.els.pitchValue.textContent = `${pitchDeg.toFixed(3)}°`;
     this.els.rollValue.textContent = `${rollDeg.toFixed(3)}°`;
-    this.els.measurementMode.textContent = info.mode;
+    this.els.measurementMode.textContent = MODE_LABEL[info.mode] ?? MODE_LABEL.active;
 
     const stability = Math.min(1, info.staticSamples / Math.max(1, this.settings.averagingSampleCount));
     this.els.stabilityValue.textContent = `${Math.round(stability * 100)}%`;
@@ -366,9 +402,11 @@ class TableLevelApp {
       if (elapsedSec >= this.settings.measurementTimeoutSec) {
         if (!this._hasSufficientSensorSamples()) {
           this._setStatus('warning', 'センサーデータ不足です。端末の向きと権限を確認してください。');
+          this._setStatusCode('MEASUREMENT_TIMEOUT_INSUFFICIENT_DATA');
           this._toggleManualConfirm(false);
         } else {
           this._setStatus('warning', '計測が安定しません。手動確定または端末位置を見直してください。');
+          this._setStatusCode('MEASUREMENT_TIMEOUT_MANUAL_CONFIRM');
           this._toggleManualConfirm(true);
         }
       }
@@ -383,22 +421,26 @@ class TableLevelApp {
       }
       this.levelAnnounced = true;
       this._setStatus('active', '水平達成。作業完了です。');
+      this._setStatusCode('LEVEL_ACHIEVED');
     }
   }
 
   _finalizeMeasurement(forced) {
     if (!this.isPortrait) {
       this._setStatus('warning', '縦向きで再計測してください。');
+      this._setStatusCode('MEASUREMENT_REJECTED_NOT_PORTRAIT');
       return;
     }
     if (!this._hasSufficientSensorSamples()) {
       this._setStatus('warning', 'センサーデータが不足しているため計算できません。');
+      this._setStatusCode('MEASUREMENT_REJECTED_INSUFFICIENT_DATA');
       return;
     }
 
     const { pitchDeg, rollDeg } = this.sensor.getDeskAngles();
     if (!Number.isFinite(pitchDeg) || !Number.isFinite(rollDeg)) {
       this._setStatus('error', 'センサー値が不正のため再計測してください。');
+      this._setStatusCode('MEASUREMENT_REJECTED_INVALID_SENSOR_VALUE');
       return;
     }
 
@@ -427,6 +469,7 @@ class TableLevelApp {
 
     const measuredMsg = forced ? '手動確定で調整指示を表示しました。' : '計測安定。調整指示を表示しました。';
     this._setStatus('active', measuredMsg);
+    this._setStatusCode(forced ? 'MEASUREMENT_FINALIZED_MANUAL' : 'MEASUREMENT_FINALIZED_AUTO');
 
     if (this.settings.voiceEnabled) {
       this.voice.speakAdjustment(result.instructions, {
@@ -531,6 +574,7 @@ class TableLevelApp {
       this._toggleManualConfirm(false);
       if (this.isMeasuring) {
         this._setStatus('warning', '横向きのため計測停止中です。縦向きに戻してください。');
+        this._setStatusCode('ORIENTATION_BLOCKED');
       }
       return;
     }
@@ -543,8 +587,35 @@ class TableLevelApp {
         this._setStatus(prev.type ?? 'active', prev.text);
       } else if (this.isMeasuring) {
         this._setStatus('active', '計測中... 端末を動かさず待機してください。');
+        this._setStatusCode('MEASUREMENT_ACTIVE');
       }
     }
+  }
+
+  _setSessionInfo(sessionId) {
+    if (this.els.sessionId) {
+      this.els.sessionId.textContent = sessionId;
+    }
+  }
+
+  _setStatusCode(code) {
+    if (!code || code === this._lastStatusCode) return;
+    this._lastStatusCode = code;
+    if (this.els.statusCode) {
+      this.els.statusCode.textContent = code;
+    }
+  }
+
+  _showPermissionHelp(code) {
+    if (this.els.permissionHelpCode) {
+      this.els.permissionHelpCode.textContent = `状態コード: ${code}`;
+    }
+    this._setStatusCode(code);
+    this.els.permissionHelpScreen?.classList.add('visible');
+  }
+
+  _hidePermissionHelp() {
+    this.els.permissionHelpScreen?.classList.remove('visible');
   }
 
   destroy() {
@@ -567,6 +638,8 @@ class TableLevelApp {
     window.removeEventListener('orientationchange', this._orientationChangeHandler);
     window.removeEventListener('pagehide', this._destroyHandler);
     window.removeEventListener('beforeunload', this._destroyHandler);
+    this.els.openPermissionHelpButton?.removeEventListener('click', this._openPermissionHelpHandler);
+    this.els.closePermissionHelpButton?.removeEventListener('click', this._closePermissionHelpHandler);
   }
 
   _hasSufficientSensorSamples(min = MIN_SAMPLES_TO_FINALIZE) {

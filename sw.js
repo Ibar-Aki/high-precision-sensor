@@ -4,31 +4,26 @@ const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_URL = new URL(self.registration.scope);
 const SCOPE_PATH = SCOPE_URL.pathname.endsWith('/') ? SCOPE_URL.pathname : `${SCOPE_URL.pathname}/`;
 const INDEX_URL = new URL('./index.html', SCOPE_URL).toString();
-const APP_SHELL = [
+const OFFLINE_URL = new URL('./offline.html', SCOPE_URL).toString();
+const CORE_SHELL = [
     './',
     './index.html',
+    './offline.html',
+    './manifest.json',
     './assets/css/style.css',
     './assets/js/app.js',
-    './assets/js/modules/SensorEngine.js',
-    './assets/js/modules/AudioEngine.js',
-    './assets/js/modules/UIManager.js',
-    './assets/js/modules/DataLogger.js',
-    './assets/js/modules/KalmanFilter1D.js',
-    './assets/js/modules/HybridStaticUtils.js',
+    './assets/js/modules/AppEventBinder.js',
+    './assets/js/modules/SettingsControlBinder.js',
+    './assets/js/modules/CalibrationControlBinder.js',
     './shared/js/KalmanFilter1D.js',
     './shared/js/HybridStaticUtils.js',
-    './assets/js/modules/SettingsManager.js',
-    './assets/js/modules/ToastManager.js',
-    './assets/js/modules/LifecycleManager.js',
-    './assets/js/modules/AppEventBinder.js',
-    './assets/js/modules/SoundSettingsVisibility.js',
     './assets/icons/icon-192.svg',
     './assets/icons/icon-512.svg',
-    './manifest.json'
 ];
 const CACHEABLE_EXACT_PATHS = new Set([
     SCOPE_PATH,
     new URL('./index.html', SCOPE_URL).pathname,
+    new URL('./offline.html', SCOPE_URL).pathname,
     new URL('./manifest.json', SCOPE_URL).pathname
 ]);
 const CACHEABLE_PREFIX_PATHS = [
@@ -39,7 +34,7 @@ const CACHEABLE_PREFIX_PATHS = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(STATIC_CACHE)
-            .then(cache => cache.addAll(APP_SHELL))
+            .then(cache => cache.addAll(CORE_SHELL))
             .then(() => self.skipWaiting())
     );
 });
@@ -103,6 +98,8 @@ async function networkFirstHtml(request, url) {
         if (isTopLevelHtmlPath(url.pathname)) {
             const indexFallback = await caches.match(INDEX_URL);
             if (indexFallback) return indexFallback;
+            const offlineFallback = await caches.match(OFFLINE_URL);
+            if (offlineFallback) return offlineFallback;
         }
         return new Response('Offline', {
             status: 503,

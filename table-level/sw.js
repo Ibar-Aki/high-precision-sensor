@@ -5,22 +5,13 @@ const SCOPE_URL = new URL(self.registration.scope);
 const SCOPE_PATH = SCOPE_URL.pathname.endsWith('/') ? SCOPE_URL.pathname : `${SCOPE_URL.pathname}/`;
 const OFFLINE_URL = new URL('./offline.html', SCOPE_URL).toString();
 
-const APP_SHELL = [
+const CORE_SHELL = [
   './',
   './index.html',
   './offline.html',
   './manifest.json',
   './assets/css/style.css',
   './assets/js/app.js',
-  './assets/js/sensor.js',
-  './assets/js/kalman.js',
-  './assets/js/hybrid-static-utils.js',
-  '../shared/js/KalmanFilter1D.js',
-  '../shared/js/HybridStaticUtils.js',
-  './assets/js/calculator.js',
-  './assets/js/voice.js',
-  './assets/js/i18n.js',
-  './assets/js/settings.js',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
   './assets/icons/apple-touch-icon.png'
@@ -38,7 +29,7 @@ const CACHEABLE_PREFIX_PATHS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(CORE_SHELL))
   );
   self.skipWaiting();
 });

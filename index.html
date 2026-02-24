@@ -57,7 +57,23 @@
         <span class="btn-icon">📱</span>
         センサーを有効にする
       </button>
+      <button id="btn-open-permission-help" class="btn-secondary" aria-label="センサー許可の手順を表示する">
+        許可手順を表示
+      </button>
       <p class="splash-note">※ iOSではセンサーへのアクセス許可が必要です</p>
+    </div>
+  </div>
+
+  <div id="permission-help-screen" class="screen screen-modal" aria-hidden="true">
+    <div class="permission-help-card glass-card">
+      <h2>センサー許可が必要です</h2>
+      <ol>
+        <li>iPhoneの「設定」を開く</li>
+        <li>「Safari」→「モーションと画面の向きのアクセス」を許可</li>
+        <li>この画面に戻って「閉じる」を押し、再度「センサーを有効にする」を実行</li>
+      </ol>
+      <p id="permission-help-reason" class="permission-help-reason">状態コード: PERMISSION_HELP_READY</p>
+      <button id="btn-close-permission-help" class="btn-primary">閉じる</button>
     </div>
   </div>
 
@@ -227,6 +243,18 @@
           2点校正
         </button>
       </div>
+
+      <section id="two-point-calibration-panel" class="status-panel glass-card-sm" aria-live="polite">
+        <h3>2点校正ステップ</h3>
+        <p id="two-point-step-text">待機中: 「2点校正」を押して開始</p>
+        <p id="two-point-guide-text">端末を静止させた状態で実行してください。</p>
+      </section>
+
+      <section class="status-panel glass-card-sm">
+        <h3>問い合わせ用情報</h3>
+        <p>セッションID: <code id="session-id">-</code></p>
+        <p>最終状態コード: <code id="status-code">INIT</code></p>
+      </section>
     </main>
 
     <!-- ========== 設定パネル ========== -->
@@ -300,7 +328,7 @@
                 <input type="range" id="averaging-sample-count" min="10" max="300" step="1" value="60" class="slider">
                 <span id="averaging-sample-count-val" class="slider-val">60</span>
               </div>
-              <p class="setting-hint">値を上げるほど高精度だが、MEASURING到達が遅くなる</p>
+              <p class="setting-hint">値を上げるほど高精度だが、確定値到達が遅くなる</p>
             </div>
           </div>
 

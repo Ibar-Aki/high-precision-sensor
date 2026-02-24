@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Level Guide 技術詳細・設定</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans JP', sans-serif;
+            background-color: #f1f5f9;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .a4-landscape {
+            width: 297mm;
+            height: 210mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.98);
+            transform-origin: top center;
+        }
+
+        @media print {
+            body {
+                background: transparent;
+            }
+
+            .a4-landscape {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pipeline-arrow {
+            color: #94a3b8;
+            font-size: 16px;
+            line-height: 1;
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen">
+    <div class="a4-landscape relative">
+
+        <!-- ===== Top Bar ===== -->
+        <div class="h-3 bg-gradient-to-r from-indigo-900 via-blue-700 to-indigo-900 w-full shrink-0"></div>
+
+        <div class="flex-1 flex flex-col px-10 pt-2 pb-3">
+
+            <!-- ===== Header ===== -->
+            <header class="flex justify-between items-end mb-3 border-b-2 border-slate-200 pb-2">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 tracking-widest code-font mb-1">PROJECT <span
+                            class="text-blue-600">TABLE-LEVEL-GUIDE</span> // v1.0</p>
+                    <h1 class="text-[26px] font-bold text-slate-800 tracking-tight leading-tight">
+                        技術詳細と設定
+                        <span class="text-lg text-slate-500 font-medium ml-2">─ アルゴリズム・設定パラメータ・ロードマップ</span>
+                    </h1>
+                </div>
+                <p
+                    class="text-[10px] text-slate-400 font-bold bg-slate-50 border border-slate-200 px-2 py-1 rounded code-font shrink-0">
+                    2026.02</p>
+            </header>
+
+            <!-- ===== Main 3-Column Grid ===== -->
+            <main class="flex-1 grid grid-cols-12 gap-4">
+
+                <!-- ========== LEFT COLUMN: 処理パイプライン + モード遷移 ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- フィルタパイプライン -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                            センサーデータパイプライン
+                        </h3>
+                        <div class="flex flex-col items-center gap-0.5">
+                            <div class="w-full bg-slate-100 border border-slate-300 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-slate-700">Raw Data（生センサー値）</p>
+                                <p class="text-[8px] text-slate-400">DeviceOrientation API</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-blue-50 border border-blue-200 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-blue-800">1D Kalman Filter</p>
+                                <p class="text-[8px] text-slate-500">Q=0.001, R=0.1 で確率的ノイズ除去</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-indigo-50 border border-indigo-200 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-indigo-800">EMA（指数移動平均）</p>
+                                <p class="text-[8px] text-slate-500">α=0.08 で高周波成分を平滑化</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-violet-50 border border-violet-200 rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold text-violet-800">Deadzone（デッドゾーン）</p>
+                                <p class="text-[8px] text-slate-500">θ=0.005° 未満の変動を遮断</p>
+                            </div>
+                            <div class="pipeline-arrow">▼</div>
+                            <div class="w-full bg-slate-800 text-white rounded px-3 py-1.5 text-center">
+                                <p class="text-[10px] font-bold">Calculator（脚調整量算出）</p>
+                                <p class="text-[8px] text-slate-300">Pitch/Roll → 4隅の高低差 → ボルト回転量</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- モード遷移 -->
+                    <section class="border-l-4 border-amber-500 bg-amber-50 bg-opacity-60 rounded-r-md p-4 flex-1">
+                        <h3 class="text-[12px] font-bold text-slate-800 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-amber-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            モード遷移（自動）
+                        </h3>
+                        <div class="space-y-1.5">
+                            <div class="bg-white p-2 rounded border border-amber-200 shadow-sm">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="bg-emerald-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">ACTIVE</span>
+                                    <span class="text-[10px] text-slate-600">計測中（分散が大きい）</span>
+                                </div>
+                            </div>
+                            <div class="text-center text-slate-300 text-xs">▼ 分散 < 閾値</div>
+                                    <div class="bg-white p-2 rounded border border-amber-200 shadow-sm">
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">LOCKING</span>
+                                            <span class="text-[10px] text-slate-600">静止検知、バッファ蓄積中</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-center text-slate-300 text-xs">▼ サンプル到達</div>
+                                    <div class="bg-white p-2 rounded border border-amber-200 shadow-sm">
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">MEASURING</span>
+                                            <span class="text-[10px] text-slate-600">確定可能（自動確定 or 手動確定）</span>
+                                        </div>
+                                    </div>
+                            </div>
+                    </section>
+                </div>
+
+                <!-- ========== CENTER COLUMN: ボルト計算 + 設定 ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- ボルト回転量の算出ロジック -->
+                    <section class="border-l-4 border-blue-500 bg-blue-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-blue-900 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-blue-600 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            ボルト回転量の算出ロジック
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="bg-white p-2.5 rounded border border-blue-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-blue-800 mb-1">Step 1: 高低差算出</p>
+                                <p class="text-[9px] text-slate-600">机の奥行きD、幅Wと傾斜角度から各隅の相対高低差を三角関数で計算。</p>
+                                <p class="text-[9px] code-font text-blue-700 mt-1">Δh = D × tan(pitch) / 2</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-blue-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-blue-800 mb-1">Step 2: ボルト回転量変換</p>
+                                <p class="text-[9px] text-slate-600">高低差をボルトピッチで除算し、回転数に変換。M8ボルト=1.25mmピッチの場合：</p>
+                                <p class="text-[9px] code-font text-blue-700 mt-1">回転数 = Δh / pitch</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-blue-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-blue-800 mb-1">Step 3: 方向判定</p>
+                                <p class="text-[9px] text-slate-600">正=上げる（右回し）、負=下げる（左回し）。符号で回転方向を自動判定。</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 設定パラメータ -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm flex-1">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-2 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            ユーザー設定パラメータ
+                        </h3>
+                        <table class="w-full text-[9px] text-left border-collapse">
+                            <thead class="bg-slate-100 text-slate-600">
+                                <tr>
+                                    <th class="py-1 px-1 border border-slate-200 w-[30%]">パラメータ</th>
+                                    <th class="py-1 px-1 border border-slate-200 w-[25%]">既定値</th>
+                                    <th class="py-1 px-1 border border-slate-200">説明</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-600">
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">ボルトピッチ</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 code-font">1.25mm（M8）</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">ボルト1回転あたりの移動量</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">机奥行き</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 code-font">700mm</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">前後脚間の距離</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">机幅</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 code-font">1200mm</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">左右脚間の距離</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">水平許容角度</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 code-font">0.05°</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">水平達成の閾値</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">EMAフィルタ強度</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 code-font">α=0.08</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">値が小さいほど安定</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-200 font-bold">音声ガイド</td>
+                                    <td class="py-0.5 px-1 border border-slate-200 code-font">ON</td>
+                                    <td class="py-0.5 px-1 border border-slate-200">SpeechSynthesis API使用</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+                </div>
+
+                <!-- ========== RIGHT COLUMN: 共通化 + ロードマップ ========== -->
+                <div class="col-span-4 flex flex-col gap-3">
+
+                    <!-- 共通モジュール -->
+                    <section class="border-l-4 border-emerald-500 bg-emerald-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[12px] font-bold text-slate-800 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            共通モジュール（本体アプリと共有）
+                        </h3>
+                        <div class="space-y-1.5">
+                            <div class="bg-white p-2 rounded border border-emerald-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-emerald-800">shared/js/KalmanFilter1D.js</p>
+                                <p class="text-[9px] text-slate-500">1Dカルマンフィルタ。両アプリが同一ロジックを共有。</p>
+                            </div>
+                            <div class="bg-white p-2 rounded border border-emerald-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-emerald-800">shared/js/HybridStaticUtils.js</p>
+                                <p class="text-[9px] text-slate-500">静止判定・バッファ管理・分散計算。106行の共通ユーティリティ。</p>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-500 mt-2">
+                            各アプリはre-exportラッパーでimport互換を維持。共通モジュール変更時は両アプリのテストを必ず実行。</p>
+                    </section>
+
+                    <!-- 高精度傾斜計との比較 -->
+                    <section class="bg-slate-800 text-white rounded-md p-4 shadow-md">
+                        <h3 class="text-[12px] font-bold mb-3 flex items-center border-b border-slate-600 pb-2">
+                            <svg class="w-4 h-4 mr-1.5 text-blue-400 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            本体アプリとの差異
+                        </h3>
+                        <table class="w-full text-[9px] text-left border-collapse">
+                            <thead class="text-slate-400">
+                                <tr>
+                                    <th class="py-1 px-1 border border-slate-600 w-[30%]">機能</th>
+                                    <th class="py-1 px-1 border border-slate-600 w-[35%]">高精度傾斜計</th>
+                                    <th class="py-1 px-1 border border-slate-600">机水平ガイド</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-300">
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-600 font-bold">目的</td>
+                                    <td class="py-0.5 px-1 border border-slate-600">汎用傾斜計測</td>
+                                    <td class="py-0.5 px-1 border border-slate-600 text-blue-300 font-bold">ボルト調整量案内
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-600 font-bold">音声</td>
+                                    <td class="py-0.5 px-1 border border-slate-600">4方向フィードバック音</td>
+                                    <td class="py-0.5 px-1 border border-slate-600 text-blue-300 font-bold">調整指示読み上げ
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-600 font-bold">校正</td>
+                                    <td class="py-0.5 px-1 border border-slate-600">1点 + 2点校正</td>
+                                    <td class="py-0.5 px-1 border border-slate-600">不要（相対差で算出）</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 border border-slate-600 font-bold">UI</td>
+                                    <td class="py-0.5 px-1 border border-slate-600">SVG水準器 + 数値</td>
+                                    <td class="py-0.5 px-1 border border-slate-600 text-blue-300 font-bold">4隅マップ + 回転指示
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <!-- ロードマップ -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm flex-1">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-blue-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            今後の展望
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-blue-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">v1.1</span>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-700">精度・UX改善</p>
+                                    <p class="text-[9px] text-slate-500">設定永続化強化、ランドスケープ対応、共通モジュールのさらなる統合。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-slate-400 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">v1.2</span>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-700">データロギング</p>
+                                    <p class="text-[9px] text-slate-500">調整履歴のCSV出力。どの机をいつ調整したかを記録。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-slate-300 text-slate-600 text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">v2.0</span>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-600">リモートモニタリング</p>
+                                    <p class="text-[9px] text-slate-400">WebSocket連携で遠隔から水平調整を指示。複数台管理。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+
+            <!-- ===== Footer ===== -->
+            <footer
+                class="mt-3 pt-2.5 border-t border-slate-200 flex justify-between items-center text-[8px] text-slate-400 code-font">
+                <p>※ 共通モジュール（shared/js/）は高精度傾斜角センサー本体と同一ロジック。変更時は両アプリのテストを実行するルール。</p>
+                <p>Table Level Guide PWA // Technical Details // MIT License</p>
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -21,6 +21,8 @@ export class UIManager {
             arcRoll: document.getElementById('arc-roll'),
             sensorStatus: document.getElementById('sensor-status'),
             sensorInfo: document.getElementById('sensor-info'),
+            sessionId: document.getElementById('session-id'),
+            statusCode: document.getElementById('status-code'),
         };
 
         this.decimalPlaces = 3;
@@ -192,6 +194,16 @@ export class UIManager {
             this._statusTextEl.textContent = text;
             this._lastStatusText = text;
         }
+    }
+
+    setSessionId(sessionId) {
+        if (!this.els.sessionId) return;
+        this.els.sessionId.textContent = sessionId || '-';
+    }
+
+    setStatusCode(code) {
+        if (!this.els.statusCode) return;
+        this.els.statusCode.textContent = code || 'UNKNOWN';
     }
 
     createRecordingButton(onStart, onStop) {
