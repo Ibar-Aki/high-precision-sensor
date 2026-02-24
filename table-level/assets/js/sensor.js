@@ -30,6 +30,7 @@ export class TableLevelSensor {
     this.rawRoll = 0;
     this.pitch = 0;
     this.roll = 0;
+    this.sampleCount = 0;
 
     this._emaInitialized = false;
     this._prevPitch = 0;
@@ -59,6 +60,7 @@ export class TableLevelSensor {
       return false;
     }
 
+    this.sampleCount += 1;
     this.rawPitch = beta;
     this.rawRoll = gamma;
 
@@ -146,6 +148,17 @@ export class TableLevelSensor {
   }
 
   resetMeasurementState() {
+    this.kfPitch.reset();
+    this.kfRoll.reset();
+    this._emaInitialized = false;
+    this._prevPitch = 0;
+    this._prevRoll = 0;
+    this.pitch = 0;
+    this.roll = 0;
+    this.rawPitch = 0;
+    this.rawRoll = 0;
+    this.sampleCount = 0;
+
     this.measurementMode = 'active';
     this.measurementVariance = Infinity;
     this.motionWindow = [];
@@ -159,6 +172,10 @@ export class TableLevelSensor {
 
   getMeasurementMode() {
     return this.measurementMode;
+  }
+
+  getSampleCount() {
+    return this.sampleCount;
   }
 
   getMeasurementInfo() {

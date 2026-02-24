@@ -2,7 +2,7 @@ import { TableLevelSensor } from './sensor.js';
 import { VoiceGuide } from './voice.js';
 import { calcAdjustmentInstructions, isLevel } from './calculator.js';
 import { TableLevelSettingsManager, DEFAULT_SETTINGS } from './settings.js';
-import { getLegLabel } from './i18n.js';
+import { getDirectionLabel, getLegLabel } from './i18n.js';
 
 const BOLT_PITCH_MAP = {
   M6: 1.0,
@@ -10,6 +10,7 @@ const BOLT_PITCH_MAP = {
   M10: 1.5,
   M12: 1.75
 };
+const MIN_SAMPLES_TO_FINALIZE = 10;
 
 class TableLevelApp {
   constructor() {
@@ -27,6 +28,10 @@ class TableLevelApp {
     this.levelAnnounced = false;
     this.currentResult = null;
     this.measurementStartedAt = 0;
+    this.isPortrait = true;
+    this._lastStatus = { type: null, text: null };
+    this._orientationBlocked = false;
+    this._statusBeforeOrientationBlock = null;
 
     this._bindElements();
     this._bindEvents();
@@ -59,6 +64,7 @@ class TableLevelApp {
       levelBanner: byId('level-banner'),
       warningBox: byId('warning-box'),
       instructionList: byId('instruction-list'),
+      settingsForm: byId('settings-form'),
       enableSensorButton: byId('enable-sensor-btn'),
       startMeasureButton: byId('start-measure-btn'),
       remeasureButton: byId('remeasure-btn'),
@@ -99,6 +105,9 @@ class TableLevelApp {
     this.els.startMeasureButton.addEventListener('click', () => this.startMeasurement());
     this.els.remeasureButton.addEventListener('click', () => this.startMeasurement());
     this.els.manualConfirmButton.addEventListener('click', () => this._confirmMeasurementManually());
+    this.els.settingsForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+    });
 
     this.els.saveSettingsButton.addEventListener('click', (event) => {
       event.preventDefault();
@@ -110,7 +119,11 @@ class TableLevelApp {
       this.settings = { ...DEFAULT_SETTINGS };
       this._applySettingsToForm();
       this._applySettingsToSensor();
-      this.settingsManager.save(this.settings);
+      const saveResult = this.settingsManager.save(this.settings);
+      if (!saveResult.ok) {
+        this._setStatus('warning', '設定の保存に失敗しました。');
+        return;
+      }
       this._setStatus('active', '設定を初期値に戻しました。');
     });
 
@@ -152,12 +165,17 @@ class TableLevelApp {
 
   _onOrientation(event) {
     if (!this.permissionGranted) return;
+    if (!this.isPortrait) return;
     this.sensor.process(event.beta, event.gamma);
   }
 
   startMeasurement() {
     if (!this.permissionGranted) {
       this._setStatus('warning', '先にセンサーを有効化してください。');
+      return;
+    }
+    if (!this.isPortrait) {
+      this._setStatus('warning', '縦向きで計測してください。');
       return;
     }
 
@@ -180,6 +198,10 @@ class TableLevelApp {
 
   _confirmMeasurementManually() {
     if (!this.permissionGranted) return;
+    if (!this._hasSufficientSensorSamples()) {
+      this._setStatus('warning', 'センサーデータが不足しているため手動確定できません。');
+      return;
+    }
     this._finalizeMeasurement(true);
   }
 
@@ -281,7 +303,6 @@ class TableLevelApp {
 
   _startLoop() {
     const tick = () => {
-      this._updateOrientationGuard();
       this._renderTelemetry();
       this._updateMeasurementFlow();
       window.requestAnimationFrame(tick);
@@ -303,6 +324,7 @@ class TableLevelApp {
 
   _updateMeasurementFlow() {
     if (!this.isMeasuring || !this.permissionGranted) return;
+    if (!this.isPortrait) return;
 
     const mode = this.sensor.getMeasurementMode();
     if (!this.resultReady && mode === 'measuring') {
@@ -313,8 +335,13 @@ class TableLevelApp {
     if (!this.resultReady) {
       const elapsedSec = (Date.now() - this.measurementStartedAt) / 1000;
       if (elapsedSec >= this.settings.measurementTimeoutSec) {
-        this._setStatus('warning', '計測が安定しません。手動確定または端末位置を見直してください。');
-        this._toggleManualConfirm(true);
+        if (!this._hasSufficientSensorSamples()) {
+          this._setStatus('warning', 'センサーデータ不足です。端末の向きと権限を確認してください。');
+          this._toggleManualConfirm(false);
+        } else {
+          this._setStatus('warning', '計測が安定しません。手動確定または端末位置を見直してください。');
+          this._toggleManualConfirm(true);
+        }
       }
       return;
     }
@@ -331,7 +358,21 @@ class TableLevelApp {
   }
 
   _finalizeMeasurement(forced) {
+    if (!this.isPortrait) {
+      this._setStatus('warning', '縦向きで再計測してください。');
+      return;
+    }
+    if (!this._hasSufficientSensorSamples()) {
+      this._setStatus('warning', 'センサーデータが不足しているため計算できません。');
+      return;
+    }
+
     const { pitchDeg, rollDeg } = this.sensor.getDeskAngles();
+    if (!Number.isFinite(pitchDeg) || !Number.isFinite(rollDeg)) {
+      this._setStatus('error', 'センサー値が不正のため再計測してください。');
+      return;
+    }
+
     const result = calcAdjustmentInstructions({
       pitchDeg,
       rollDeg,
@@ -390,7 +431,7 @@ class TableLevelApp {
       if (instruction.turns <= 0) {
         item.textContent = `${leg}: 調整不要`;
       } else {
-        const directionLabel = instruction.direction === 'CW' ? '時計回り' : '反時計回り';
+        const directionLabel = getDirectionLabel(this.settings.language, instruction.direction);
         item.textContent = `${leg}: ${directionLabel} ${instruction.turns}回転`;
       }
       this.els.instructionList.appendChild(item);
@@ -441,13 +482,44 @@ class TableLevelApp {
   }
 
   _setStatus(type, text) {
+    if (this._lastStatus.type === type && this._lastStatus.text === text) {
+      return;
+    }
+    this._lastStatus = { type, text };
     this.els.statusText.dataset.status = type;
     this.els.statusText.textContent = text;
   }
 
   _updateOrientationGuard() {
-    const isPortrait = window.innerHeight >= window.innerWidth;
-    this.els.orientationOverlay.classList.toggle('visible', !isPortrait);
+    const wasPortrait = this.isPortrait;
+    this.isPortrait = window.innerHeight >= window.innerWidth;
+    this.els.orientationOverlay.classList.toggle('visible', !this.isPortrait);
+    if (!this.isPortrait) {
+      if (!this._orientationBlocked) {
+        this._orientationBlocked = true;
+        this._statusBeforeOrientationBlock = { ...this._lastStatus };
+      }
+      this._toggleManualConfirm(false);
+      if (this.isMeasuring) {
+        this._setStatus('warning', '横向きのため計測停止中です。縦向きに戻してください。');
+      }
+      return;
+    }
+
+    if (!wasPortrait && this._orientationBlocked) {
+      this._orientationBlocked = false;
+      const prev = this._statusBeforeOrientationBlock;
+      this._statusBeforeOrientationBlock = null;
+      if (prev?.text) {
+        this._setStatus(prev.type ?? 'active', prev.text);
+      } else if (this.isMeasuring) {
+        this._setStatus('active', '計測中... 端末を動かさず待機してください。');
+      }
+    }
+  }
+
+  _hasSufficientSensorSamples(min = MIN_SAMPLES_TO_FINALIZE) {
+    return this.sensor.getSampleCount() >= min;
   }
 
   async _registerServiceWorker() {

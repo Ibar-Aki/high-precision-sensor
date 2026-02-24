@@ -69,3 +69,8 @@ export function getLegLabel(language, leg) {
   const lang = language === 'en' ? 'en' : 'ja';
   return LEG_LABELS[lang][leg] ?? leg;
 }
+
+export function getDirectionLabel(language, direction) {
+  const lang = language === 'en' ? 'en' : 'ja';
+  return DIRECTION_LABELS[lang][direction] ?? direction;
+}

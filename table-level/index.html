@@ -65,7 +65,7 @@
 
       <div class="card settings-card">
         <h2>設定</h2>
-        <form>
+        <form id="settings-form">
           <div class="form-grid">
             <label>幅(mm)<input id="table-width" type="number" min="300" max="3000" step="1"></label>
             <label>奥行(mm)<input id="table-depth" type="number" min="300" max="3000" step="1"></label>
@@ -116,7 +116,7 @@
           </div>
 
           <div class="actions">
-            <button id="save-settings-btn" class="btn primary">設定保存</button>
+            <button id="save-settings-btn" class="btn primary" type="button">設定保存</button>
             <button id="reset-settings-btn" class="btn" type="button">初期値に戻す</button>
           </div>
         </form>

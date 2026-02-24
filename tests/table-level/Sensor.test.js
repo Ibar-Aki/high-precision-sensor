@@ -21,4 +21,20 @@ describe('table-level/sensor', () => {
     const angle = sensor.getDeskAngles();
     expect(angle.pitchDeg).toBeLessThan(0);
   });
+
+  it('再計測リセットでサンプル数とフィルタ履歴を初期化すること', () => {
+    const sensor = new TableLevelSensor();
+    for (let i = 0; i < 50; i++) {
+      sensor.process(8.0, 8.0);
+    }
+    expect(sensor.getSampleCount()).toBeGreaterThan(0);
+
+    sensor.resetMeasurementState();
+    expect(sensor.getSampleCount()).toBe(0);
+
+    sensor.process(0.0, 0.0);
+    const angle = sensor.getDeskAngles();
+    expect(Math.abs(angle.pitchDeg)).toBeLessThan(0.05);
+    expect(Math.abs(angle.rollDeg)).toBeLessThan(0.05);
+  });
 });

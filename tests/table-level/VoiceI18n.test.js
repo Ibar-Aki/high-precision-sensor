@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { formatTurnsJa, buildInstructionText } from '../../table-level/assets/js/i18n.js';
+import { formatTurnsJa, buildInstructionText, getDirectionLabel } from '../../table-level/assets/js/i18n.js';
 import { VoiceGuide } from '../../table-level/assets/js/voice.js';
 
 describe('table-level/i18n + voice', () => {
@@ -47,5 +47,10 @@ describe('table-level/i18n + voice', () => {
     expect(text).toContain('手前左');
     expect(text).toContain('反時計回り');
     expect(text).toContain('1回半');
+  });
+
+  it('方向ラベルが言語別に返ること', () => {
+    expect(getDirectionLabel('ja', 'CW')).toBe('時計回り');
+    expect(getDirectionLabel('en', 'CCW')).toBe('counter-clockwise');
   });
 });
