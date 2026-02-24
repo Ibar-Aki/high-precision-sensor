@@ -1,13 +1,16 @@
 import { KalmanFilter1D } from './kalman.js';
+import {
+  isStaticDetected,
+  pushMotionMetric,
+  pushStaticSample,
+  resetMotionWindow,
+  resetStaticBuffer,
+  toPositiveInt,
+  updateMotionWindow
+} from './hybrid-static-utils.js';
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
-}
-
-function toPositiveInt(value, fallback) {
-  if (!Number.isFinite(value)) return fallback;
-  const rounded = Math.round(value);
-  return rounded > 0 ? rounded : fallback;
 }
 
 export class TableLevelSensor {
@@ -36,8 +39,8 @@ export class TableLevelSensor {
     this._prevPitch = 0;
     this._prevRoll = 0;
 
-    this._prevFilteredPitch = null;
-    this._prevFilteredRoll = null;
+    this._prevKfPitch = null;
+    this._prevKfRoll = null;
 
     this.measurementMode = 'active';
     this.measurementVariance = Infinity;
@@ -161,12 +164,7 @@ export class TableLevelSensor {
 
     this.measurementMode = 'active';
     this.measurementVariance = Infinity;
-    this.motionWindow = [];
-    this.motionWindowStart = 0;
-    this.motionWindowSum = 0;
-    this.motionWindowSqSum = 0;
-    this._prevFilteredPitch = null;
-    this._prevFilteredRoll = null;
+    resetMotionWindow(this);
     this._resetStaticBuffers();
   }
 
@@ -202,89 +200,26 @@ export class TableLevelSensor {
   }
 
   _updateMotionWindow(filteredPitch, filteredRoll) {
-    if (this._prevFilteredPitch === null || this._prevFilteredRoll === null) {
-      this._prevFilteredPitch = filteredPitch;
-      this._prevFilteredRoll = filteredRoll;
-      this._pushMotionMetric(0);
-      return;
-    }
-
-    const dp = filteredPitch - this._prevFilteredPitch;
-    const dr = filteredRoll - this._prevFilteredRoll;
-    this._prevFilteredPitch = filteredPitch;
-    this._prevFilteredRoll = filteredRoll;
-    this._pushMotionMetric(Math.sqrt(dp * dp + dr * dr));
+    const windowSize = toPositiveInt(this.staticDurationFrames, 30);
+    updateMotionWindow(this, filteredPitch, filteredRoll, windowSize);
   }
 
   _pushMotionMetric(metric) {
     const windowSize = toPositiveInt(this.staticDurationFrames, 30);
-    const v = Number.isFinite(metric) ? metric : 0;
-
-    this.motionWindow.push(v);
-    this.motionWindowSum += v;
-    this.motionWindowSqSum += v * v;
-
-    while (this.motionWindow.length - this.motionWindowStart > windowSize) {
-      const dropped = this.motionWindow[this.motionWindowStart];
-      this.motionWindowStart += 1;
-      this.motionWindowSum -= dropped;
-      this.motionWindowSqSum -= dropped * dropped;
-    }
-
-    if (this.motionWindowStart > 256 && this.motionWindowStart * 2 >= this.motionWindow.length) {
-      this.motionWindow = this.motionWindow.slice(this.motionWindowStart);
-      this.motionWindowStart = 0;
-    }
-
-    const sampleCount = this.motionWindow.length - this.motionWindowStart;
-    if (sampleCount <= 0) {
-      this.measurementVariance = Infinity;
-      return;
-    }
-
-    const mean = this.motionWindowSum / sampleCount;
-    const variance = this.motionWindowSqSum / sampleCount - mean * mean;
-    this.measurementVariance = variance > 0 ? variance : 0;
+    pushMotionMetric(this, metric, windowSize);
   }
 
   _isStaticDetected() {
     const windowSize = toPositiveInt(this.staticDurationFrames, 30);
-    const sampleCount = this.motionWindow.length - this.motionWindowStart;
-    if (sampleCount < windowSize) {
-      return false;
-    }
-
-    return this.measurementVariance <= this.staticVarianceThreshold;
+    return isStaticDetected(this, windowSize, this.staticVarianceThreshold);
   }
 
   _pushStaticSample(pitch, roll) {
-    this.staticPitchBuffer.push(pitch);
-    this.staticRollBuffer.push(roll);
-    this.staticPitchSum += pitch;
-    this.staticRollSum += roll;
-
     const max = 500;
-    while (this.staticPitchBuffer.length - this.staticBufferStart > max) {
-      this.staticPitchSum -= this.staticPitchBuffer[this.staticBufferStart];
-      this.staticRollSum -= this.staticRollBuffer[this.staticBufferStart];
-      this.staticBufferStart += 1;
-    }
-
-    if (this.staticBufferStart > 256 && this.staticBufferStart * 2 >= this.staticPitchBuffer.length) {
-      this.staticPitchBuffer = this.staticPitchBuffer.slice(this.staticBufferStart);
-      this.staticRollBuffer = this.staticRollBuffer.slice(this.staticBufferStart);
-      this.staticBufferStart = 0;
-    }
-
-    this.staticSampleCount = this.staticPitchBuffer.length - this.staticBufferStart;
+    pushStaticSample(this, pitch, roll, max);
   }
 
   _resetStaticBuffers() {
-    this.staticPitchBuffer = [];
-    this.staticRollBuffer = [];
-    this.staticBufferStart = 0;
-    this.staticPitchSum = 0;
-    this.staticRollSum = 0;
-    this.staticSampleCount = 0;
+    resetStaticBuffer(this);
   }
 }

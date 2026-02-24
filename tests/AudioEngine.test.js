@@ -206,4 +206,18 @@ describe('AudioEngine', () => {
         expect(engine.gains.front.gain.setTargetAtTime.mock.calls.length).toBe(initialFrontSilenceCalls);
         expect(engine.gains.back.gain.setTargetAtTime.mock.calls.length).toBe(initialBackSilenceCalls);
     });
+
+    it('destroy時にAudioContext.closeの失敗を握りつぶして破棄を継続すること', async () => {
+        const engine = new AudioEngine();
+        engine.init();
+        const closeError = new Error('close failed');
+        engine.ctx.close = vi.fn(() => Promise.reject(closeError));
+
+        expect(() => engine.destroy()).not.toThrow();
+        await Promise.resolve();
+
+        expect(engine.ctx).toBeNull();
+        expect(engine.oscillators).toEqual({});
+        expect(engine.gains).toEqual({});
+    });
 });

@@ -64,8 +64,7 @@ export class DataLogger {
 
     exportCSV() {
         if (this._count === 0) {
-            alert("No data to export");
-            return;
+            return { ok: false, reason: 'no_data' };
         }
 
         // CSVヘッダー
@@ -78,6 +77,9 @@ export class DataLogger {
 
         // Blob作成
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+            return { ok: false, reason: 'unsupported' };
+        }
         const url = URL.createObjectURL(blob);
 
         try {
@@ -95,12 +97,23 @@ export class DataLogger {
             link.click();
             document.body.removeChild(link);
 
-            return filename;
+            return { ok: true, filename };
         } finally {
-            if (typeof URL.revokeObjectURL === 'function') {
-                URL.revokeObjectURL(url);
+            if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+                this._scheduleRevokeObjectURL(url);
             }
         }
+    }
+
+    _scheduleRevokeObjectURL(url) {
+        const revoke = () => {
+            URL.revokeObjectURL(url);
+        };
+        if (typeof window !== 'undefined' && typeof window.setTimeout === 'function') {
+            window.setTimeout(revoke, 0);
+            return;
+        }
+        setTimeout(revoke, 0);
     }
 
     getStats() {

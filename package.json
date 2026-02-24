@@ -1,8 +1,7 @@
 {
   "name": "high-precision-sensor",
   "version": "1.0.0",
-  "description": "![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)\r ![Platform: iOS](https://img.shields.io/badge/Platform-iOS-blue.svg)",
-  "main": "sw.js",
+  "description": "High precision tilt angle sensor PWA for iOS with calibration, filtering, and offline support.",
   "type": "module",
   "directories": {
     "doc": "docs"
@@ -16,8 +15,14 @@
     "tunnel:iphone": "npx --yes localtunnel --port 4173",
     "iphone:test": "node scripts/start-iphone-test.mjs --port 4173"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "pwa",
+    "sensor",
+    "tilt",
+    "ios",
+    "calibration"
+  ],
+  "author": "AKIHIRO",
   "license": "MIT",
   "devDependencies": {
     "playwright": "^1.58.2",

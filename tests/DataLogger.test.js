@@ -83,10 +83,18 @@ describe('DataLogger', () => {
             })
         };
 
-        const filename = logger.exportCSV();
-        expect(filename).toMatch(/^sensor_log_\d{8}_\d{6}\.csv$/);
-        expect(created[0].attrs.download).toBe(filename);
+        const result = logger.exportCSV();
+        expect(result.ok).toBe(true);
+        expect(result.filename).toMatch(/^sensor_log_\d{8}_\d{6}\.csv$/);
+        expect(created[0].attrs.download).toBe(result.filename);
         expect(document.body.appendChild).toHaveBeenCalled();
+        vi.advanceTimersByTime(0);
         expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+    });
+
+    it('ログが空のときはCSVを出力せず理由コードを返すこと', () => {
+        const logger = new DataLogger();
+        const result = logger.exportCSV();
+        expect(result).toEqual({ ok: false, reason: 'no_data' });
     });
 });

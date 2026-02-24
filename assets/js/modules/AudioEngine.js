@@ -289,6 +289,7 @@ export class AudioEngine {
 
     destroy() {
         this._stopSpeechAnnouncements();
+        const ctx = this.ctx;
         if (this._initialized) {
             for (const osc of Object.values(this.oscillators)) {
                 try {
@@ -300,7 +301,6 @@ export class AudioEngine {
         }
         this.oscillators = {};
         this.gains = {};
-        this.ctx?.close();
         this.ctx = null;
         this.masterGain = null;
         this.panner = null;
@@ -308,5 +308,10 @@ export class AudioEngine {
         this._latestRoll = 0;
         this._isSilenced = false;
         this._initialized = false;
+        if (ctx && typeof ctx.close === 'function') {
+            Promise.resolve(ctx.close()).catch(() => {
+                // クローズ失敗は破棄フローを継続
+            });
+        }
     }
 }

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'table-level-v1.1.0';
+const CACHE_VERSION = 'table-level-v1.1.1';
 const CACHE_PREFIX = 'table-level-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
@@ -11,7 +11,9 @@ const APP_SHELL = [
   './assets/js/app.js',
   './assets/js/sensor.js',
   './assets/js/kalman.js',
+  './assets/js/hybrid-static-utils.js',
   '../shared/js/KalmanFilter1D.js',
+  '../shared/js/HybridStaticUtils.js',
   './assets/js/calculator.js',
   './assets/js/voice.js',
   './assets/js/i18n.js',

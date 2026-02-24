@@ -35,6 +35,12 @@ class TableLevelApp {
     this._orientationBlocked = false;
     this._statusBeforeOrientationBlock = null;
     this._lastLoopUpdateAt = 0;
+    this._loopFrameId = null;
+    this._destroyed = false;
+    this._orientationHandler = (event) => this._onOrientation(event);
+    this._resizeHandler = () => this._updateOrientationGuard();
+    this._orientationChangeHandler = () => this._updateOrientationGuard();
+    this._destroyHandler = () => this.destroy();
 
     this._bindElements();
     this._bindEvents();
@@ -132,8 +138,10 @@ class TableLevelApp {
 
     this.els.boltType.addEventListener('change', () => this._toggleBoltCustomInput());
 
-    window.addEventListener('resize', () => this._updateOrientationGuard());
-    window.addEventListener('orientationchange', () => this._updateOrientationGuard());
+    window.addEventListener('resize', this._resizeHandler);
+    window.addEventListener('orientationchange', this._orientationChangeHandler);
+    window.addEventListener('pagehide', this._destroyHandler);
+    window.addEventListener('beforeunload', this._destroyHandler);
   }
 
   async _enableSensorAccess() {
@@ -156,7 +164,7 @@ class TableLevelApp {
     }
 
     if (!this.hasOrientationListener) {
-      window.addEventListener('deviceorientation', (event) => this._onOrientation(event), true);
+      window.addEventListener('deviceorientation', this._orientationHandler, true);
       this.hasOrientationListener = true;
     }
 
@@ -310,6 +318,7 @@ class TableLevelApp {
 
   _startLoop() {
     const tick = (timestamp) => {
+      if (this._destroyed) return;
       const hidden = document.hidden;
       const canRenderTelemetry = this.permissionGranted && this.isPortrait && !hidden;
       const canUpdateMeasurementFlow = this.isMeasuring && canRenderTelemetry;
@@ -325,9 +334,9 @@ class TableLevelApp {
         this._lastLoopUpdateAt = timestamp;
       }
 
-      window.requestAnimationFrame(tick);
+      this._loopFrameId = window.requestAnimationFrame(tick);
     };
-    window.requestAnimationFrame(tick);
+    this._loopFrameId = window.requestAnimationFrame(tick);
   }
 
   _renderTelemetry() {
@@ -536,6 +545,28 @@ class TableLevelApp {
         this._setStatus('active', '計測中... 端末を動かさず待機してください。');
       }
     }
+  }
+
+  destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+
+    if (this._loopFrameId !== null) {
+      window.cancelAnimationFrame(this._loopFrameId);
+      this._loopFrameId = null;
+    }
+
+    if (this.hasOrientationListener) {
+      window.removeEventListener('deviceorientation', this._orientationHandler, true);
+      this.hasOrientationListener = false;
+    }
+
+    this.voice.stop();
+
+    window.removeEventListener('resize', this._resizeHandler);
+    window.removeEventListener('orientationchange', this._orientationChangeHandler);
+    window.removeEventListener('pagehide', this._destroyHandler);
+    window.removeEventListener('beforeunload', this._destroyHandler);
   }
 
   _hasSufficientSensorSamples(min = MIN_SAMPLES_TO_FINALIZE) {

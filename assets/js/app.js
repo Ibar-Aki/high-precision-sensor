@@ -7,6 +7,124 @@ import { ToastManager } from './modules/ToastManager.js';
 import { LifecycleManager } from './modules/LifecycleManager.js';
 import { AppEventBinder } from './modules/AppEventBinder.js';
 
+const SETTINGS_SAVE_SCHEMA = [
+  { key: 'emaAlpha', read: (app) => app.sensor.emaAlpha },
+  { key: 'kalmanQ', read: (app) => app.sensor.kfPitch.q },
+  { key: 'kalmanR', read: (app) => app.sensor.kfPitch.r },
+  { key: 'deadzone', read: (app) => app.sensor.deadzone },
+  { key: 'staticVarianceThreshold', read: (app) => app.sensor.staticVarianceThreshold },
+  { key: 'staticDurationFrame', read: (app) => app.sensor.staticDurationFrame },
+  { key: 'averagingSampleCount', read: (app) => app.sensor.averagingSampleCount },
+  { key: 'soundEnabled', read: (app) => app.audio.enabled },
+  { key: 'outputType', read: (app) => app.audio.outputType },
+  { key: 'soundMode', read: (app) => app.audio.mode },
+  { key: 'soundThreshold', read: (app) => app.audio.threshold },
+  { key: 'masterVolume', read: (app) => app.audio.masterVolume },
+  { key: 'decimalPlaces', read: (app) => app.ui.decimalPlaces },
+  { key: 'levelSens', read: (app) => app.ui.levelSensitivity },
+];
+
+const SETTINGS_APPLY_SCHEMA = [
+  {
+    key: 'emaAlpha',
+    apply: (app, value) => {
+      app.sensor.emaAlpha = value;
+    },
+    inputId: 'filter-alpha',
+    valueId: 'filter-alpha-val',
+    format: (value) => value.toFixed(2),
+  },
+  {
+    key: 'kalmanQ',
+    inputId: 'kalman-q',
+    valueId: 'kalman-q-val',
+    format: (value) => value.toFixed(4),
+  },
+  {
+    key: 'kalmanR',
+    inputId: 'kalman-r',
+    valueId: 'kalman-r-val',
+    format: (value) => value.toFixed(2),
+  },
+  {
+    key: 'deadzone',
+    apply: (app, value) => {
+      app.sensor.deadzone = value;
+    },
+    inputId: 'deadzone',
+    valueId: 'deadzone-val',
+    format: (value) => value.toFixed(3),
+  },
+  {
+    key: 'staticVarianceThreshold',
+    apply: (app, value) => {
+      app.sensor.staticVarianceThreshold = value;
+    },
+    inputId: 'static-variance-threshold',
+    valueId: 'static-variance-threshold-val',
+    format: (value) => Number(value).toFixed(4),
+  },
+  {
+    key: 'staticDurationFrame',
+    normalize: (value) => Math.max(1, Math.round(value)),
+    apply: (app, value) => {
+      app.sensor.staticDurationFrame = value;
+    },
+    inputId: 'static-duration-frame',
+    valueId: 'static-duration-frame-val',
+  },
+  {
+    key: 'averagingSampleCount',
+    normalize: (value) => Math.max(1, Math.round(value)),
+    apply: (app, value) => {
+      app.sensor.averagingSampleCount = value;
+    },
+    inputId: 'averaging-sample-count',
+    valueId: 'averaging-sample-count-val',
+  },
+  {
+    key: 'soundEnabled',
+    apply: (app, value) => {
+      app.audio.enabled = value;
+      document.getElementById('btn-sound-toggle')?.classList.toggle('active', value);
+    },
+  },
+  {
+    key: 'soundThreshold',
+    apply: (app, value) => {
+      app.audio.threshold = value;
+    },
+    inputId: 'sound-threshold',
+    valueId: 'sound-threshold-val',
+    format: (value) => value.toFixed(1),
+  },
+  {
+    key: 'masterVolume',
+    apply: (app, value) => {
+      app.audio.setMasterVolume(value);
+    },
+    inputId: 'master-volume',
+    valueId: 'master-volume-val',
+    format: (value) => `${Math.round(value * 100)}%`,
+  },
+  {
+    key: 'decimalPlaces',
+    apply: (app, value) => {
+      app.ui.decimalPlaces = value;
+    },
+    inputId: 'decimal-places',
+    valueId: 'decimal-places-val',
+  },
+  {
+    key: 'levelSens',
+    apply: (app, value) => {
+      app.ui.levelSensitivity = value;
+    },
+    inputId: 'level-sensitivity',
+    valueId: 'level-sensitivity-val',
+  },
+];
+
 /**
  * メインアプリケーション
  * 各モジュールの統合とイベントハンドリング
@@ -83,18 +201,18 @@ class App {
       try {
         const perm = await DeviceOrientationEvent.requestPermission();
         if (perm !== 'granted') {
-          alert('センサーへのアクセスが拒否されました。\n設定 > Safari > モーションと画面の向きのアクセス を許可してください。');
+          this._showToast('センサーへのアクセスが拒否されました。Safari設定の「モーションと画面の向きのアクセス」を許可してください。');
           return false;
         }
       } catch (e) {
-        alert('センサー権限リクエストエラー: ' + e.message);
+        this._showToast(`センサー権限リクエストエラー: ${e?.message ?? 'unknown_error'}`);
         return false;
       }
     }
 
     // DeviceOrientation が使えるか確認
     if (typeof DeviceOrientationEvent === 'undefined') {
-      alert('このデバイス/ブラウザではDeviceOrientation APIがサポートされていません。');
+      this._showToast('このデバイス/ブラウザではDeviceOrientation APIがサポートされていません。');
       return false;
     }
 
@@ -122,10 +240,16 @@ class App {
           this._showToast('REC Start');
         },
         () => {
-          const filename = this.logger.exportCSV();
+          const exportResult = this.logger.exportCSV();
           this.logger.stop();
-          if (filename) {
-            this.ui.showDownloadButton(filename);
+          if (!exportResult.ok) {
+            if (exportResult.reason === 'no_data') {
+              this._showToast('エクスポートするデータがありません');
+            } else {
+              this._showToast('CSVエクスポートに失敗しました');
+            }
+          } else {
+            this.ui.showDownloadButton(exportResult.filename);
             this._showToast('CSV Saved');
           }
           const stats = this.logger.getStats();
@@ -275,22 +399,10 @@ class App {
   }
 
   _saveSettingsNow() {
-    const s = {
-      emaAlpha: this.sensor.emaAlpha,
-      kalmanQ: this.sensor.kfPitch.q,
-      kalmanR: this.sensor.kfPitch.r,
-      deadzone: this.sensor.deadzone,
-      staticVarianceThreshold: this.sensor.staticVarianceThreshold,
-      staticDurationFrame: this.sensor.staticDurationFrame,
-      averagingSampleCount: this.sensor.averagingSampleCount,
-      soundEnabled: this.audio.enabled,
-      outputType: this.audio.outputType,
-      soundMode: this.audio.mode,
-      soundThreshold: this.audio.threshold,
-      masterVolume: this.audio.masterVolume,
-      decimalPlaces: this.ui.decimalPlaces,
-      levelSens: this.ui.levelSensitivity,
-    };
+    const s = {};
+    for (const entry of SETTINGS_SAVE_SCHEMA) {
+      s[entry.key] = entry.read(this);
+    }
     const result = this.settingsManager.save(s);
     if (!result.ok) {
       const now = performance.now();
@@ -305,72 +417,11 @@ class App {
     const s = this.settings;
     if (!s || Object.keys(s).length === 0) return;
 
-    if (s.emaAlpha !== undefined) {
-      this.sensor.emaAlpha = s.emaAlpha;
-      const el = document.getElementById('filter-alpha');
-      if (el) el.value = s.emaAlpha;
-      const val = document.getElementById('filter-alpha-val');
-      if (val) val.textContent = s.emaAlpha.toFixed(2);
-    }
-    if (s.kalmanQ !== undefined) {
-      const el = document.getElementById('kalman-q');
-      if (el) el.value = s.kalmanQ;
-      const val = document.getElementById('kalman-q-val');
-      if (val) val.textContent = s.kalmanQ.toFixed(4);
-    }
-    if (s.kalmanR !== undefined) {
-      const el = document.getElementById('kalman-r');
-      if (el) el.value = s.kalmanR;
-      const val = document.getElementById('kalman-r-val');
-      if (val) val.textContent = s.kalmanR.toFixed(2);
-    }
+    this._applySettingSchema(s, SETTINGS_APPLY_SCHEMA);
+
     if (s.kalmanQ !== undefined && s.kalmanR !== undefined) {
       this.sensor.setKalmanParams(s.kalmanQ, s.kalmanR);
     }
-    if (s.deadzone !== undefined) {
-      this.sensor.deadzone = s.deadzone;
-      const el = document.getElementById('deadzone');
-      if (el) el.value = s.deadzone;
-      const val = document.getElementById('deadzone-val');
-      if (val) val.textContent = s.deadzone.toFixed(3);
-    }
-    if (s.staticVarianceThreshold !== undefined) {
-      this.sensor.staticVarianceThreshold = s.staticVarianceThreshold;
-      const el = document.getElementById('static-variance-threshold');
-      if (el) el.value = s.staticVarianceThreshold;
-      const val = document.getElementById('static-variance-threshold-val');
-      if (val) val.textContent = Number(s.staticVarianceThreshold).toFixed(4);
-    }
-    if (s.staticDurationFrame !== undefined) {
-      this.sensor.staticDurationFrame = Math.max(1, Math.round(s.staticDurationFrame));
-      const el = document.getElementById('static-duration-frame');
-      if (el) el.value = this.sensor.staticDurationFrame;
-      const val = document.getElementById('static-duration-frame-val');
-      if (val) val.textContent = this.sensor.staticDurationFrame;
-    }
-    if (s.averagingSampleCount !== undefined) {
-      this.sensor.averagingSampleCount = Math.max(1, Math.round(s.averagingSampleCount));
-      const el = document.getElementById('averaging-sample-count');
-      if (el) el.value = this.sensor.averagingSampleCount;
-      const val = document.getElementById('averaging-sample-count-val');
-      if (val) val.textContent = this.sensor.averagingSampleCount;
-    }
-    if (s.soundEnabled !== undefined) {
-      this.audio.enabled = s.soundEnabled;
-      document.getElementById('btn-sound-toggle')?.classList.toggle('active', s.soundEnabled);
-    }
-
-    const refreshSoundSettingsVisibility = () => {
-      const isNormalOutput = this.audio.outputType === 'normal';
-      const normalSoundSettings = document.getElementById('normal-sound-settings');
-      if (normalSoundSettings) {
-        normalSoundSettings.style.display = isNormalOutput ? 'block' : 'none';
-      }
-      const thresholdSetting = document.getElementById('threshold-setting');
-      if (thresholdSetting) {
-        thresholdSetting.style.display = isNormalOutput && this.audio.mode === 'threshold' ? 'block' : 'none';
-      }
-    };
 
     const outputType = s.outputType ?? 'normal';
     this.audio.setOutputType(outputType);
@@ -384,35 +435,38 @@ class App {
     document.querySelectorAll('[data-sound-mode]').forEach(b => {
       b.classList.toggle('active', b.dataset.soundMode === this.audio.mode);
     });
-    refreshSoundSettingsVisibility();
+    this._refreshSoundSettingsVisibility();
+  }
 
-    if (s.soundThreshold !== undefined) {
-      this.audio.threshold = s.soundThreshold;
-      const el = document.getElementById('sound-threshold');
-      if (el) el.value = s.soundThreshold;
-      const val = document.getElementById('sound-threshold-val');
-      if (val) val.textContent = s.soundThreshold.toFixed(1);
+  _applySettingSchema(settings, schema) {
+    for (const entry of schema) {
+      if (settings[entry.key] === undefined) continue;
+
+      const normalized = entry.normalize ? entry.normalize(settings[entry.key]) : settings[entry.key];
+      entry.apply?.(this, normalized, settings);
+
+      if (entry.inputId) {
+        const input = document.getElementById(entry.inputId);
+        if (input) input.value = String(normalized);
+      }
+      if (entry.valueId) {
+        const valueEl = document.getElementById(entry.valueId);
+        if (valueEl) {
+          valueEl.textContent = entry.format ? entry.format(normalized, this) : String(normalized);
+        }
+      }
     }
-    if (s.masterVolume !== undefined) {
-      this.audio.setMasterVolume(s.masterVolume);
-      const el = document.getElementById('master-volume');
-      if (el) el.value = s.masterVolume;
-      const val = document.getElementById('master-volume-val');
-      if (val) val.textContent = Math.round(s.masterVolume * 100) + '%';
+  }
+
+  _refreshSoundSettingsVisibility() {
+    const isNormalOutput = this.audio.outputType === 'normal';
+    const normalSoundSettings = document.getElementById('normal-sound-settings');
+    if (normalSoundSettings) {
+      normalSoundSettings.style.display = isNormalOutput ? 'block' : 'none';
     }
-    if (s.decimalPlaces !== undefined) {
-      this.ui.decimalPlaces = s.decimalPlaces;
-      const el = document.getElementById('decimal-places');
-      if (el) el.value = s.decimalPlaces;
-      const val = document.getElementById('decimal-places-val');
-      if (val) val.textContent = s.decimalPlaces;
-    }
-    if (s.levelSens !== undefined) {
-      this.ui.levelSensitivity = s.levelSens;
-      const el = document.getElementById('level-sensitivity');
-      if (el) el.value = s.levelSens;
-      const val = document.getElementById('level-sensitivity-val');
-      if (val) val.textContent = s.levelSens;
+    const thresholdSetting = document.getElementById('threshold-setting');
+    if (thresholdSetting) {
+      thresholdSetting.style.display = isNormalOutput && this.audio.mode === 'threshold' ? 'block' : 'none';
     }
   }
 

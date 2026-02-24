@@ -1,4 +1,13 @@
 import { KalmanFilter1D } from './KalmanFilter1D.js';
+import {
+    isStaticDetected,
+    pushMotionMetric,
+    pushStaticSample,
+    resetMotionWindow,
+    resetStaticBuffer,
+    toPositiveInt,
+    updateMotionWindow
+} from './HybridStaticUtils.js';
 
 /**
  * センサーエンジン
@@ -350,92 +359,36 @@ export class SensorEngine {
         this.roll = 0;
         this._prevPitch = 0;
         this._prevRoll = 0;
-        this._prevKfPitch = null;
-        this._prevKfRoll = null;
-        this.motionWindow = [];
-        this.motionWindowStart = 0;
-        this.motionWindowSum = 0;
-        this.motionWindowSqSum = 0;
-        this.measurementVariance = Infinity;
+        resetMotionWindow(this);
         this.measurementMode = 'active';
         this._resetStaticBuffer();
     }
 
     _updateMotionWindow(kfPitch, kfRoll) {
-        if (this._prevKfPitch === null || this._prevKfRoll === null) {
-            this._prevKfPitch = kfPitch;
-            this._prevKfRoll = kfRoll;
-            this._pushMotionMetric(0);
-            return;
-        }
-
-        const deltaPitch = kfPitch - this._prevKfPitch;
-        const deltaRoll = kfRoll - this._prevKfRoll;
-        const metric = Math.sqrt(deltaPitch * deltaPitch + deltaRoll * deltaRoll);
-
-        this._prevKfPitch = kfPitch;
-        this._prevKfRoll = kfRoll;
-        this._pushMotionMetric(metric);
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
+        updateMotionWindow(this, kfPitch, kfRoll, windowSize);
     }
 
     _pushMotionMetric(metric) {
         const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
-        const safeMetric = Number.isFinite(metric) ? metric : 0;
-        this.motionWindow.push(safeMetric);
-        this.motionWindowSum += safeMetric;
-        this.motionWindowSqSum += safeMetric * safeMetric;
-        while (this.motionWindow.length - this.motionWindowStart > windowSize) {
-            const dropped = this.motionWindow[this.motionWindowStart];
-            this.motionWindowStart += 1;
-            this.motionWindowSum -= dropped;
-            this.motionWindowSqSum -= dropped * dropped;
-        }
-        this._compactMotionWindowIfNeeded();
-
-        const sampleCount = this.motionWindow.length - this.motionWindowStart;
-        if (sampleCount <= 0) {
-            this.measurementVariance = Infinity;
-            return;
-        }
-        const mean = this.motionWindowSum / sampleCount;
-        const variance = this.motionWindowSqSum / sampleCount - mean * mean;
-        this.measurementVariance = variance > 0 ? variance : 0;
+        pushMotionMetric(this, metric, windowSize);
     }
 
     _isStaticDetected() {
         const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
-        const sampleCount = this.motionWindow.length - this.motionWindowStart;
-        if (sampleCount < windowSize) return false;
-
         const threshold = Number.isFinite(this.staticVarianceThreshold) && this.staticVarianceThreshold >= 0
             ? this.staticVarianceThreshold
             : 0.002;
-        return this.measurementVariance <= threshold;
+        return isStaticDetected(this, windowSize, threshold);
     }
 
     _pushStaticSample(kfPitch, kfRoll) {
-        this.staticPitchBuffer.push(kfPitch);
-        this.staticRollBuffer.push(kfRoll);
-        this.staticPitchSum += kfPitch;
-        this.staticRollSum += kfRoll;
-
         const maxSize = this._toPositiveInt(this.maxBufferSize, 2000);
-        while (this.staticPitchBuffer.length - this.staticBufferStart > maxSize) {
-            this.staticPitchSum -= this.staticPitchBuffer[this.staticBufferStart];
-            this.staticRollSum -= this.staticRollBuffer[this.staticBufferStart];
-            this.staticBufferStart += 1;
-        }
-        this._compactStaticBuffersIfNeeded();
-        this.staticSampleCount = this.staticPitchBuffer.length - this.staticBufferStart;
+        pushStaticSample(this, kfPitch, kfRoll, maxSize);
     }
 
     _resetStaticBuffer() {
-        this.staticPitchBuffer = [];
-        this.staticRollBuffer = [];
-        this.staticBufferStart = 0;
-        this.staticPitchSum = 0;
-        this.staticRollSum = 0;
-        this.staticSampleCount = 0;
+        resetStaticBuffer(this);
     }
 
     _compactMotionWindowIfNeeded() {
@@ -456,9 +409,7 @@ export class SensorEngine {
     }
 
     _toPositiveInt(value, fallback) {
-        if (!Number.isFinite(value)) return fallback;
-        const normalized = Math.round(value);
-        return normalized > 0 ? normalized : fallback;
+        return toPositiveInt(value, fallback);
     }
 
     _storageErrorReason(error) {
