@@ -1,7 +1,8 @@
 # High-precision-sensor パフォーマンス修正レポート
 
-- 作成日時: 2026-02-18 08:03:35 +09:00
-- 作成者: Codex＋GPT-5
+作成日時: 2026-02-18 08:03:35 +09:00
+作成者: Codex＋GPT-5
+更新日: 2026-02-24
 
 ## 対象
 - プロジェクト: `C:\Users\AKIHIRO\.gemini\antigravity\High-precision-sensor`
@@ -61,9 +62,11 @@
 
 ## 実行結果
 - `npm test -- --run`
-  - 4ファイル / 28テスト成功
+  - 8ファイル / 42テスト成功
 - `npm run test:e2e-smoke`
   - 成功（ServiceWorkerキャッシュ、センサー欠損復帰、設定保存エラー通知、オフライン起動を確認）
+- `npm run test:e2e:table-level`
+  - 成功（ServiceWorkerキャッシュ、自動確定、手動確定、オフライン起動を確認）
 
 ## 備考
 - 今回は挙動互換を優先して、機能仕様（角度表示、音声読み上げ仕様、キャリブレーション仕様）は変更していません。

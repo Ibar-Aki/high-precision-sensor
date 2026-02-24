@@ -1,19 +1,20 @@
 # 外部テスター共有ガイド（高精度傾斜角センサー）
 
-- 作成日時: 2026-02-15 22:03:35 +09:00
-- 作成者: Codex＋GPT-5
-- 更新日: 2026-02-16
+作成日時: 2026-02-15 22:03:35 +09:00
+作成者: Codex＋GPT-5
+更新日: 2026-02-24
 
 ## 1. 目的
 
 このドキュメントは、外部テスターに本アプリを安全かつ確実に試してもらうための手順をまとめたものです。  
 対象は `High-precision-sensor` プロジェクトです。
 
-## 2. 現在の確認状況（2026-02-15 時点）
+## 2. 現在の確認状況（2026-02-24 時点）
 
 - ローカルテストは成功済みです。
-- `npm test --silent` は全件成功（13 tests）。
-- `npm run test:e2e-smoke --silent` は全チェック成功。
+- `npm test -- --run` は全件成功（42 tests）。
+- `npm run test:e2e-smoke` は全チェック成功。
+- `npm run test:e2e:table-level` は全チェック成功。
 - Git ブランチは `main`。
 - GitHub remote 設定済み: `https://github.com/Ibar-Aki/high-precision-sensor.git`
 - `main` への push 完了（`88e2c72` / 2026-02-15 22:12:37 +09:00）。

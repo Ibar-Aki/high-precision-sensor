@@ -110,6 +110,6 @@ Pitch/Roll それぞれに適用し、既存の `calibPitch`, `calibRoll` に加
 - `assets/css/style.css`（必要最小限）
 - `tests/SensorEngine.test.js`
 - `tests/e2e-offline-smoke.mjs`
-- `docs/01_UserManual.md`
-- `docs/02_TechnicalSpec.md`
-- `docs/06_DevGuide.md`
+- `docs/high-precision-sensor/01_UserManual.md`
+- `docs/high-precision-sensor/02_TechnicalSpec.md`
+- `docs/high-precision-sensor/06_DevGuide.md`

@@ -100,4 +100,4 @@ $$
   - オフライン起動
   - 外部フォントURLへのアクセスなし
 
-詳細な実行結果は `docs/10_AutomatedVerificationReport.md` を参照してください。
+詳細な実行結果は `docs/high-precision-sensor/10_AutomatedVerificationReport.md` を参照してください。

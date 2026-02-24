@@ -11,6 +11,8 @@ const BOLT_PITCH_MAP = {
   M12: 1.75
 };
 const MIN_SAMPLES_TO_FINALIZE = 10;
+const ACTIVE_LOOP_INTERVAL_MS = 1000 / 30;
+const IDLE_LOOP_INTERVAL_MS = 120;
 
 class TableLevelApp {
   constructor() {
@@ -32,6 +34,7 @@ class TableLevelApp {
     this._lastStatus = { type: null, text: null };
     this._orientationBlocked = false;
     this._statusBeforeOrientationBlock = null;
+    this._lastLoopUpdateAt = 0;
 
     this._bindElements();
     this._bindEvents();
@@ -241,6 +244,10 @@ class TableLevelApp {
       this._setStatus('warning', '設定の保存に失敗しました。');
       return;
     }
+    if (!loaded.ok) {
+      this._setStatus('warning', '設定保存後の読み込み検証に失敗しました。');
+      return;
+    }
 
     this._setStatus('active', '設定を保存しました。');
   }
@@ -302,9 +309,22 @@ class TableLevelApp {
   }
 
   _startLoop() {
-    const tick = () => {
-      this._renderTelemetry();
-      this._updateMeasurementFlow();
+    const tick = (timestamp) => {
+      const hidden = document.hidden;
+      const canRenderTelemetry = this.permissionGranted && this.isPortrait && !hidden;
+      const canUpdateMeasurementFlow = this.isMeasuring && canRenderTelemetry;
+      const targetInterval = canUpdateMeasurementFlow ? ACTIVE_LOOP_INTERVAL_MS : IDLE_LOOP_INTERVAL_MS;
+
+      if (timestamp - this._lastLoopUpdateAt >= targetInterval) {
+        if (canRenderTelemetry) {
+          this._renderTelemetry();
+        }
+        if (canUpdateMeasurementFlow) {
+          this._updateMeasurementFlow();
+        }
+        this._lastLoopUpdateAt = timestamp;
+      }
+
       window.requestAnimationFrame(tick);
     };
     window.requestAnimationFrame(tick);

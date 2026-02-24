@@ -1,4 +1,5 @@
 const CACHE_VERSION = 'table-level-v1.1.0';
+const CACHE_PREFIX = 'table-level-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const APP_SHELL = [
@@ -10,6 +11,7 @@ const APP_SHELL = [
   './assets/js/app.js',
   './assets/js/sensor.js',
   './assets/js/kalman.js',
+  '../shared/js/KalmanFilter1D.js',
   './assets/js/calculator.js',
   './assets/js/voice.js',
   './assets/js/i18n.js',
@@ -30,7 +32,8 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
       keys
-        .filter((key) => key !== STATIC_CACHE)
+        // 同一アプリの旧バージョンのみ削除する
+        .filter((key) => key.startsWith(CACHE_PREFIX) && key !== STATIC_CACHE)
         .map((key) => caches.delete(key))
     ))
   );

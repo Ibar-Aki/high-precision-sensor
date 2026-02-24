@@ -4,6 +4,7 @@
  */
 
 const CACHE_NAME = 'tilt-sensor-v4';
+const CACHE_PREFIX = 'tilt-sensor-';
 const ASSETS = [
     './',
     './index.html',
@@ -14,6 +15,7 @@ const ASSETS = [
     './assets/js/modules/UIManager.js',
     './assets/js/modules/DataLogger.js',
     './assets/js/modules/KalmanFilter1D.js',
+    './shared/js/KalmanFilter1D.js',
     './assets/js/modules/SettingsManager.js',
     './assets/js/modules/ToastManager.js',
     './assets/js/modules/LifecycleManager.js',
@@ -38,7 +40,8 @@ self.addEventListener('activate', (event) => {
         caches.keys().then(keys =>
             Promise.all(
                 keys
-                    .filter(key => key !== CACHE_NAME)
+                    // 同一アプリの旧バージョンのみ削除する
+                    .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
                     .map(key => caches.delete(key))
             )
         ).then(() => self.clients.claim())
