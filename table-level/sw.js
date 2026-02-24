@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'table-level-v1.1.2';
+const CACHE_VERSION = 'table-level-v1.1.3';
 const CACHE_PREFIX = 'table-level-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_URL = new URL(self.registration.scope);
@@ -12,6 +12,15 @@ const CORE_SHELL = [
   './manifest.json',
   './assets/css/style.css',
   './assets/js/app.js',
+  './assets/js/sensor.js',
+  './assets/js/voice.js',
+  './assets/js/calculator.js',
+  './assets/js/settings.js',
+  './assets/js/i18n.js',
+  './assets/js/kalman.js',
+  './assets/js/hybrid-static-utils.js',
+  '../shared/js/KalmanFilter1D.js',
+  '../shared/js/HybridStaticUtils.js',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
   './assets/icons/apple-touch-icon.png'

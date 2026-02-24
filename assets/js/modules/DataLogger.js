@@ -67,16 +67,16 @@ export class DataLogger {
             return { ok: false, reason: 'no_data' };
         }
 
-        // CSVヘッダー
-        let csvContent = "Time(ms),Pitch(deg),Roll(deg)\n";
-
-        // データ行
-        this._forEachLog(row => {
-            csvContent += `${row[0]},${row[1].toFixed(5)},${row[2].toFixed(5)}\n`;
+        const csvRows = new Array(this._count + 1);
+        csvRows[0] = "Time(ms),Pitch(deg),Roll(deg)\n";
+        let rowIndex = 1;
+        this._forEachLog((row) => {
+            csvRows[rowIndex] = `${row[0]},${row[1].toFixed(5)},${row[2].toFixed(5)}\n`;
+            rowIndex += 1;
         });
 
         // Blob作成
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(csvRows, { type: 'text/csv;charset=utf-8;' });
         if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
             return { ok: false, reason: 'unsupported' };
         }

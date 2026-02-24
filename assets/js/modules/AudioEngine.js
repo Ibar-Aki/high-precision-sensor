@@ -39,6 +39,9 @@ export class AudioEngine {
         this._latestPitch = 0;
         this._latestRoll = 0;
         this._isSilenced = false;
+        this._resumePromise = null;
+        this._lastResumeAttemptAt = -Infinity;
+        this._resumeRetryIntervalMs = 1000;
     }
 
     init() {
@@ -108,10 +111,8 @@ export class AudioEngine {
             return;
         }
 
-        // AudioContext がサスペンドされていたら再開
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
+        // AudioContext がサスペンドされていたら再開（多重実行を抑止）
+        this._ensureContextRunning();
 
         const absPitch = Math.abs(pitch);
         const absRoll = Math.abs(roll);
@@ -195,6 +196,44 @@ export class AudioEngine {
             g.gain.setTargetAtTime(0, now, SILENCE_RAMP_SECONDS);
         }
         this._isSilenced = true;
+    }
+
+    _ensureContextRunning() {
+        if (!this.ctx || this.ctx.state !== 'suspended') {
+            return;
+        }
+        if (this._resumePromise) {
+            return;
+        }
+
+        const now = this._getNowMs();
+        if (now - this._lastResumeAttemptAt < this._resumeRetryIntervalMs) {
+            return;
+        }
+        this._lastResumeAttemptAt = now;
+
+        try {
+            const maybePromise = this.ctx.resume?.();
+            if (!maybePromise || typeof maybePromise.then !== 'function') {
+                return;
+            }
+            this._resumePromise = Promise.resolve(maybePromise)
+                .catch(() => {
+                    // ユーザー操作待ちなどでresume不可でも継続
+                })
+                .finally(() => {
+                    this._resumePromise = null;
+                });
+        } catch {
+            // resume例外時も次回リトライへ
+        }
+    }
+
+    _getNowMs() {
+        if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+            return performance.now();
+        }
+        return Date.now();
     }
 
     setMasterVolume(v) {
@@ -316,6 +355,8 @@ export class AudioEngine {
         this._latestPitch = 0;
         this._latestRoll = 0;
         this._isSilenced = false;
+        this._resumePromise = null;
+        this._lastResumeAttemptAt = -Infinity;
         this._initialized = false;
         if (ctx && typeof ctx.close === 'function') {
             Promise.resolve(ctx.close()).catch(() => {

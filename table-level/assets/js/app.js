@@ -62,6 +62,7 @@ class TableLevelApp {
     this._beforeUnloadHandler = () => this.destroy();
     this._openPermissionHelpHandler = () => this._showPermissionHelp('PERMISSION_HELP_MANUAL');
     this._closePermissionHelpHandler = () => this._hidePermissionHelp();
+    this._unbinders = [];
 
     this._bindElements();
     this._bindEvents();
@@ -139,22 +140,22 @@ class TableLevelApp {
   }
 
   _bindEvents() {
-    this.els.enableSensorButton.addEventListener('click', () => this._enableSensorAccess());
-    this.els.openPermissionHelpButton.addEventListener('click', this._openPermissionHelpHandler);
-    this.els.closePermissionHelpButton.addEventListener('click', this._closePermissionHelpHandler);
-    this.els.startMeasureButton.addEventListener('click', () => this.startMeasurement());
-    this.els.remeasureButton.addEventListener('click', () => this.startMeasurement());
-    this.els.manualConfirmButton.addEventListener('click', () => this._confirmMeasurementManually());
-    this.els.settingsForm.addEventListener('submit', (event) => {
+    this._addListener(this.els.enableSensorButton, 'click', () => this._enableSensorAccess());
+    this._addListener(this.els.openPermissionHelpButton, 'click', this._openPermissionHelpHandler);
+    this._addListener(this.els.closePermissionHelpButton, 'click', this._closePermissionHelpHandler);
+    this._addListener(this.els.startMeasureButton, 'click', () => this.startMeasurement());
+    this._addListener(this.els.remeasureButton, 'click', () => this.startMeasurement());
+    this._addListener(this.els.manualConfirmButton, 'click', () => this._confirmMeasurementManually());
+    this._addListener(this.els.settingsForm, 'submit', (event) => {
       event.preventDefault();
     });
 
-    this.els.saveSettingsButton.addEventListener('click', (event) => {
+    this._addListener(this.els.saveSettingsButton, 'click', (event) => {
       event.preventDefault();
       this._saveSettingsFromForm();
     });
 
-    this.els.resetSettingsButton.addEventListener('click', (event) => {
+    this._addListener(this.els.resetSettingsButton, 'click', (event) => {
       event.preventDefault();
       this.settings = { ...DEFAULT_SETTINGS };
       this._applySettingsToForm();
@@ -167,12 +168,18 @@ class TableLevelApp {
       this._setStatus('active', '設定を初期値に戻しました。');
     });
 
-    this.els.boltType.addEventListener('change', () => this._toggleBoltCustomInput());
+    this._addListener(this.els.boltType, 'change', () => this._toggleBoltCustomInput());
 
-    window.addEventListener('resize', this._resizeHandler);
-    window.addEventListener('orientationchange', this._orientationChangeHandler);
-    window.addEventListener('pagehide', this._pageHideHandler);
-    window.addEventListener('beforeunload', this._beforeUnloadHandler);
+    this._addListener(window, 'resize', this._resizeHandler);
+    this._addListener(window, 'orientationchange', this._orientationChangeHandler);
+    this._addListener(window, 'pagehide', this._pageHideHandler);
+    this._addListener(window, 'beforeunload', this._beforeUnloadHandler);
+  }
+
+  _addListener(target, eventName, handler) {
+    if (!target) return;
+    target.addEventListener(eventName, handler);
+    this._unbinders.push(() => target.removeEventListener(eventName, handler));
   }
 
   async _enableSensorAccess() {
@@ -636,14 +643,12 @@ class TableLevelApp {
       this.hasOrientationListener = false;
     }
 
-    this.voice.stop();
+    for (const unbind of this._unbinders) {
+      unbind();
+    }
+    this._unbinders = [];
 
-    window.removeEventListener('resize', this._resizeHandler);
-    window.removeEventListener('orientationchange', this._orientationChangeHandler);
-    window.removeEventListener('pagehide', this._pageHideHandler);
-    window.removeEventListener('beforeunload', this._beforeUnloadHandler);
-    this.els.openPermissionHelpButton?.removeEventListener('click', this._openPermissionHelpHandler);
-    this.els.closePermissionHelpButton?.removeEventListener('click', this._closePermissionHelpHandler);
+    this.voice.stop();
   }
 
   _hasSufficientSensorSamples(min = MIN_SAMPLES_TO_FINALIZE) {

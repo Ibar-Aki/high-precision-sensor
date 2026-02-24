@@ -132,10 +132,38 @@ async function run() {
   try {
     const page = await context.newPage();
     await page.goto(baseUrl, { waitUntil: 'networkidle' });
+    const precacheRequiredAssets = [
+      '/table-level/index.html',
+      '/table-level/offline.html',
+      '/table-level/manifest.json',
+      '/table-level/assets/css/style.css',
+      '/table-level/assets/js/app.js',
+      '/table-level/assets/js/sensor.js',
+      '/table-level/assets/js/voice.js',
+      '/table-level/assets/js/calculator.js',
+      '/table-level/assets/js/settings.js',
+      '/table-level/assets/js/i18n.js',
+      '/table-level/assets/js/kalman.js',
+      '/table-level/assets/js/hybrid-static-utils.js',
+      '/shared/js/KalmanFilter1D.js',
+      '/shared/js/HybridStaticUtils.js',
+      '/table-level/assets/icons/icon-192.png',
+      '/table-level/assets/icons/icon-512.png',
+      '/table-level/assets/icons/apple-touch-icon.png'
+    ];
     await page.waitForFunction(async () => {
       const reg = await navigator.serviceWorker.getRegistration('/table-level/');
       return Boolean(reg);
     });
+    await page.waitForFunction(async (required) => {
+      const cacheNames = await caches.keys();
+      const activeName = cacheNames.find((name) => name.startsWith('table-level-') && name.endsWith('-static'));
+      if (!activeName) return false;
+      const cache = await caches.open(activeName);
+      const keys = await cache.keys();
+      const paths = new Set(keys.map((request) => new URL(request.url).pathname));
+      return required.every((asset) => paths.has(asset));
+    }, precacheRequiredAssets, { timeout: 10000 });
     await page.reload({ waitUntil: 'networkidle' });
 
     const cacheInfo = await page.evaluate(async () => {
@@ -153,22 +181,7 @@ async function run() {
     });
 
     assert(Boolean(cacheInfo.activeName), 'table-level ServiceWorker キャッシュが見つかりません');
-    const requiredAssets = [
-      '/table-level/index.html',
-      '/table-level/offline.html',
-      '/table-level/assets/css/style.css',
-      '/table-level/assets/js/app.js',
-      '/table-level/assets/js/sensor.js',
-      '/table-level/assets/js/kalman.js',
-      '/table-level/assets/js/hybrid-static-utils.js',
-      '/shared/js/KalmanFilter1D.js',
-      '/shared/js/HybridStaticUtils.js',
-      '/table-level/assets/js/calculator.js',
-      '/table-level/assets/js/voice.js',
-      '/table-level/assets/js/i18n.js',
-      '/table-level/assets/js/settings.js'
-    ];
-    requiredAssets.forEach((asset) => {
+    precacheRequiredAssets.forEach((asset) => {
       assert(cacheInfo.paths.includes(asset), `table-level ServiceWorkerキャッシュ不足: ${asset}`);
     });
 

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'tilt-sensor-v6';
+const CACHE_VERSION = 'tilt-sensor-v7';
 const CACHE_PREFIX = 'tilt-sensor-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_URL = new URL(self.registration.scope);
@@ -12,9 +12,19 @@ const CORE_SHELL = [
     './manifest.json',
     './assets/css/style.css',
     './assets/js/app.js',
+    './assets/js/modules/SensorEngine.js',
+    './assets/js/modules/AudioEngine.js',
+    './assets/js/modules/UIManager.js',
+    './assets/js/modules/DataLogger.js',
+    './assets/js/modules/SettingsManager.js',
+    './assets/js/modules/ToastManager.js',
+    './assets/js/modules/LifecycleManager.js',
     './assets/js/modules/AppEventBinder.js',
     './assets/js/modules/SettingsControlBinder.js',
     './assets/js/modules/CalibrationControlBinder.js',
+    './assets/js/modules/SoundSettingsVisibility.js',
+    './assets/js/modules/KalmanFilter1D.js',
+    './assets/js/modules/HybridStaticUtils.js',
     './shared/js/KalmanFilter1D.js',
     './shared/js/HybridStaticUtils.js',
     './assets/icons/icon-192.svg',

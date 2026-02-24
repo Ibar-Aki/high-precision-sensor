@@ -213,6 +213,20 @@ describe('AudioEngine', () => {
         expect(engine.gains.back.gain.setTargetAtTime.mock.calls.length).toBe(initialBackSilenceCalls);
     });
 
+    it('AudioContext再開要求を多重発行しないこと', () => {
+        const engine = new AudioEngine();
+        engine.enabled = true;
+        engine.init();
+        engine.ctx.state = 'suspended';
+        engine.ctx.resume = vi.fn(() => new Promise(() => { }));
+
+        for (let i = 0; i < 10; i++) {
+            engine.update(10, 0);
+        }
+
+        expect(engine.ctx.resume).toHaveBeenCalledTimes(1);
+    });
+
     it('destroy時にAudioContext.closeの失敗を握りつぶして破棄を継続すること', async () => {
         const engine = new AudioEngine();
         engine.init();

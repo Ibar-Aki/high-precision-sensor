@@ -127,39 +127,51 @@ async function run() {
   try {
     const page = await context.newPage();
     await page.goto(baseUrl, { waitUntil: 'networkidle' });
-    await page.waitForFunction(async () => {
-      const reg = await navigator.serviceWorker.getRegistration();
-      return Boolean(reg);
-    });
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.evaluate(async () => {
-      await fetch('/docs/INDEX.md');
-    });
-
-    const cachePaths = await page.evaluate(async () => {
-      const cache = await caches.open('tilt-sensor-v6-static');
-      const keys = await cache.keys();
-      return keys.map((req) => new URL(req.url).pathname);
-    });
-    const requiredAssets = [
+    const precacheRequiredAssets = [
       '/index.html',
+      '/offline.html',
+      '/manifest.json',
       '/assets/css/style.css',
       '/assets/js/app.js',
       '/assets/js/modules/SensorEngine.js',
       '/assets/js/modules/AudioEngine.js',
       '/assets/js/modules/UIManager.js',
       '/assets/js/modules/DataLogger.js',
+      '/assets/js/modules/SettingsManager.js',
+      '/assets/js/modules/ToastManager.js',
+      '/assets/js/modules/LifecycleManager.js',
+      '/assets/js/modules/AppEventBinder.js',
+      '/assets/js/modules/SettingsControlBinder.js',
+      '/assets/js/modules/CalibrationControlBinder.js',
+      '/assets/js/modules/SoundSettingsVisibility.js',
       '/assets/js/modules/KalmanFilter1D.js',
       '/assets/js/modules/HybridStaticUtils.js',
       '/shared/js/KalmanFilter1D.js',
       '/shared/js/HybridStaticUtils.js',
-      '/assets/js/modules/SettingsManager.js',
-      '/assets/js/modules/SoundSettingsVisibility.js',
       '/assets/icons/icon-192.svg',
-      '/assets/icons/icon-512.svg',
-      '/manifest.json'
+      '/assets/icons/icon-512.svg'
     ];
-    requiredAssets.forEach((asset) => {
+    await page.waitForFunction(async () => {
+      const reg = await navigator.serviceWorker.getRegistration();
+      return Boolean(reg);
+    });
+    await page.waitForFunction(async (required) => {
+      const cache = await caches.open('tilt-sensor-v7-static');
+      const keys = await cache.keys();
+      const paths = new Set(keys.map((req) => new URL(req.url).pathname));
+      return required.every((asset) => paths.has(asset));
+    }, precacheRequiredAssets, { timeout: 10000 });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.evaluate(async () => {
+      await fetch('/docs/INDEX.md');
+    });
+
+    const cachePaths = await page.evaluate(async () => {
+      const cache = await caches.open('tilt-sensor-v7-static');
+      const keys = await cache.keys();
+      return keys.map((req) => new URL(req.url).pathname);
+    });
+    precacheRequiredAssets.forEach((asset) => {
       assert(cachePaths.includes(asset), `ServiceWorkerキャッシュ不足: ${asset}`);
     });
     assert(!cachePaths.includes('/docs/INDEX.md'), '非対象ファイルがServiceWorkerキャッシュされています: /docs/INDEX.md');

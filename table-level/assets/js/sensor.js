@@ -36,6 +36,8 @@ export class TableLevelSensor {
     this.sampleCount = 0;
 
     this._emaInitialized = false;
+    this.emaPitch = 0;
+    this.emaRoll = 0;
     this._prevPitch = 0;
     this._prevRoll = 0;
 
@@ -85,6 +87,8 @@ export class TableLevelSensor {
 
       this.pitch = this.staticPitchSum / this.staticSampleCount;
       this.roll = this.staticRollSum / this.staticSampleCount;
+      this.emaPitch = this.pitch;
+      this.emaRoll = this.roll;
       this._prevPitch = this.pitch;
       this._prevRoll = this.roll;
       return true;
@@ -95,27 +99,29 @@ export class TableLevelSensor {
       this.measurementMode = 'active';
     }
 
-    let emaPitch = filteredPitch;
-    let emaRoll = filteredRoll;
-
     if (!this._emaInitialized) {
+      this.emaPitch = filteredPitch;
+      this.emaRoll = filteredRoll;
       this._emaInitialized = true;
     } else {
-      emaPitch = this.emaAlpha * filteredPitch + (1 - this.emaAlpha) * this.pitch;
-      emaRoll = this.emaAlpha * filteredRoll + (1 - this.emaAlpha) * this.roll;
+      this.emaPitch = this.emaAlpha * filteredPitch + (1 - this.emaAlpha) * this.emaPitch;
+      this.emaRoll = this.emaAlpha * filteredRoll + (1 - this.emaAlpha) * this.emaRoll;
     }
 
-    if (Math.abs(emaPitch - this._prevPitch) < this.deadzone) {
-      emaPitch = this._prevPitch;
+    let nextPitch = this.emaPitch;
+    let nextRoll = this.emaRoll;
+
+    if (Math.abs(nextPitch - this._prevPitch) < this.deadzone) {
+      nextPitch = this._prevPitch;
     }
-    if (Math.abs(emaRoll - this._prevRoll) < this.deadzone) {
-      emaRoll = this._prevRoll;
+    if (Math.abs(nextRoll - this._prevRoll) < this.deadzone) {
+      nextRoll = this._prevRoll;
     }
 
-    this.pitch = emaPitch;
-    this.roll = emaRoll;
-    this._prevPitch = emaPitch;
-    this._prevRoll = emaRoll;
+    this.pitch = nextPitch;
+    this.roll = nextRoll;
+    this._prevPitch = nextPitch;
+    this._prevRoll = nextRoll;
     return true;
   }
 
@@ -154,6 +160,8 @@ export class TableLevelSensor {
     this.kfPitch.reset();
     this.kfRoll.reset();
     this._emaInitialized = false;
+    this.emaPitch = 0;
+    this.emaRoll = 0;
     this._prevPitch = 0;
     this._prevRoll = 0;
     this.pitch = 0;
