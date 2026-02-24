@@ -77,10 +77,10 @@ graph TD
 
 ## 7. 関連資料
 
-- `docs/high-precision-sensor/02_TechnicalSpec.md`
-- `docs/high-precision-sensor/06_Proposal_Hybrid_Static_Average.md`
-- `docs/high-precision-sensor/07_Optimization_and_Verification_Plan.md`
-- `docs/high-precision-sensor/13_TwoPointCalibration_Design.md`
+- `docs/high-precision-sensor/spec/SP-02_TechnicalSpec.md`
+- `docs/high-precision-sensor/design/DS-04_Proposal_Hybrid_Static_Average.md`
+- `docs/high-precision-sensor/design/DS-05_Optimization_and_Verification_Plan.md`
+- `docs/high-precision-sensor/design/DS-06_TwoPointCalibration_Design.md`
 
 ## 8. 2点キャリブレーション実装メモ
 

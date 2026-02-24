@@ -45,4 +45,4 @@
 ## 5. ドキュメント境界
 
 1. 本アプリに関する資料は `docs/table-level/` のみに記載する。
-2. 高精度傾斜角センサー本体の資料は `docs/high-precision-sensor/` を参照する。
+2. 高精度傾斜角センサー本体の資料は `docs/high-precision-sensor/00_INDEX.md` を参照する。

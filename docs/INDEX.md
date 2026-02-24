@@ -12,20 +12,32 @@
 
 1. `docs/high-precision-sensor/`
    - 高精度傾斜角センサー本体に関する仕様、検証、設計、レビューを配置する。
+   - カテゴリ別サブディレクトリ: `spec/`, `design/`, `review/`, `testing/`, `slides/`, `archive/`
 2. `docs/table-level/`
    - 机水平ガイドに関する仕様、検証、設計、運用資料を配置する。
-3. `docs/high-precision-sensor/archive/`
-   - 高精度傾斜角センサーの旧版資料を保管する。
-4. `docs` 直下
+   - カテゴリ別サブディレクトリ: `spec/`, `design/`, `testing/`, `slides/`
+3. `docs` 直下
    - この `INDEX.md` のみを配置し、アプリ固有文書は置かない。
 
-## 3. 参照入口
+## 3. 共通命名ルール
 
-1. 高精度傾斜角センサー: `docs/high-precision-sensor/`
-2. 机水平ガイド: `docs/table-level/`
+| プレフィックス | カテゴリ | 説明 |
+|:---|:---|:---|
+| `SP-` | spec/ | 仕様・ガイド |
+| `DS-` | design/ | アルゴリズム設計・提案 |
+| `RV-` | review/ | レビュー・品質評価 |
+| `TS-` | testing/ | テスト・検証・運用 |
 
-## 4. 更新ルール
+ファイル名形式: `{PREFIX}-{NN}_{英語名}.md`（日付はファイル名に含めず、文書内の `更新日` で管理）
+
+## 4. 参照入口
+
+1. 高精度傾斜角センサー: [`docs/high-precision-sensor/00_INDEX.md`](high-precision-sensor/00_INDEX.md)
+2. 机水平ガイド: [`docs/table-level/00_INDEX.md`](table-level/00_INDEX.md)
+
+## 5. 更新ルール
 
 1. Markdown 新規作成時は `作成日時` と `作成者` を必ず記載する。
 2. Markdown 更新時は `更新日` を必ず記載する。
 3. 仕様変更時は、対象アプリの文書のみ更新する（他アプリ文書へ混在させない）。
+4. 新規追加時はカテゴリに合った `{PREFIX}-{NN}` を連番で付与する。

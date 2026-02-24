@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PoC 実証試験計画書 — 高精度傾斜計 &amp; 机水平ガイド</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans JP', sans-serif;
+            background-color: #f1f5f9;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .a4-portrait {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-break {
+            page-break-after: always;
+            break-after: page;
+        }
+
+        @media print {
+            body {
+                background: transparent;
+            }
+
+            .a4-portrait {
+                box-shadow: none;
+                margin: 0;
+            }
+
+            .screen-gap {
+                display: none;
+            }
+        }
+
+        @media screen {
+            .screen-gap {
+                height: 24px;
+                background: #f1f5f9;
+            }
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Go badge */
+        .badge-go {
+            background: linear-gradient(135deg, #0d9488, #14b8a6);
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 3px;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-nogo {
+            background: linear-gradient(135deg, #dc2626, #f87171);
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 3px;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col items-center py-6">
+
+    <!-- ============================================================= -->
+    <!-- PAGE 1                                                         -->
+    <!-- ============================================================= -->
+    <div class="a4-portrait page-break relative">
+
+        <!-- Top Bar -->
+        <div class="h-3 bg-gradient-to-r from-cyan-900 via-teal-700 to-cyan-900 w-full shrink-0"></div>
+
+        <div class="flex-1 flex flex-col px-10 pt-5 pb-6">
+
+            <!-- Header -->
+            <header class="flex justify-between items-end mb-5 border-b-2 border-slate-200 pb-3">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 tracking-widest code-font mb-1">PROJECT <span
+                            class="text-teal-600">HIGH-PRECISION-SENSOR</span> // PoC VALIDATION PLAN</p>
+                    <h1 class="text-[24px] font-bold text-slate-800 tracking-tight leading-tight">
+                        実証試験（PoC）計画書
+                        <span class="text-base text-slate-500 font-medium ml-2">─ 高精度傾斜計 &amp; 机水平ガイド</span>
+                    </h1>
+                </div>
+                <p
+                    class="text-[10px] text-slate-400 font-bold bg-slate-50 border border-slate-200 px-2 py-1 rounded code-font shrink-0">
+                    2026.02.24</p>
+            </header>
+
+            <!-- Main Content -->
+            <main class="flex-1 grid grid-cols-12 gap-5">
+
+                <!-- ========== LEFT COLUMN ========== -->
+                <div class="col-span-5 flex flex-col gap-4">
+
+                    <!-- 1. 実証の目的 -->
+                    <section class="border-l-4 border-teal-500 bg-teal-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-slate-800 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            1. 実証の目的
+                        </h3>
+                        <p class="text-[10.5px] text-slate-600 leading-relaxed mb-2">
+                            高精度傾斜計と机水平ガイドについて、以下を<strong class="text-slate-800">実運用に近い条件</strong>で検証する。
+                        </p>
+                        <div class="space-y-1.5">
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-teal-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">1</span>
+                                <p class="text-[10.5px] text-slate-600"><strong
+                                        class="text-slate-800">精度：</strong>参照器に対して許容差内か</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-teal-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">2</span>
+                                <p class="text-[10.5px] text-slate-600"><strong
+                                        class="text-slate-800">再現性：</strong>同条件で結果のばらつきが小さいか</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-teal-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">3</span>
+                                <p class="text-[10.5px] text-slate-600"><strong
+                                        class="text-slate-800">実運用性：</strong>作業時間・再作業率・失敗率が許容範囲か</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 2. 検証仮説 -->
+                    <section class="border-l-4 border-cyan-500 bg-cyan-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-cyan-900 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-cyan-600 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            2. 検証仮説
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="bg-white p-2.5 rounded border border-cyan-100 shadow-sm">
+                                <p class="font-bold text-cyan-800 text-[10.5px] mb-0.5">仮説①：計測精度</p>
+                                <p class="text-[10px] text-slate-600">高精度傾斜計は静止状態で参照器との差が <strong
+                                        class="text-teal-700">±0.3° 以内</strong>に収まる</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-cyan-100 shadow-sm">
+                                <p class="font-bold text-cyan-800 text-[10.5px] mb-0.5">仮説②：収束性能</p>
+                                <p class="text-[10px] text-slate-600">机水平ガイドは <strong
+                                        class="text-teal-700">2回以内</strong>の再計測で水平閾値内へ到達できる</p>
+                            </div>
+                            <div class="bg-white p-2.5 rounded border border-cyan-100 shadow-sm">
+                                <p class="font-bold text-cyan-800 text-[10.5px] mb-0.5">仮説③：オフライン動作</p>
+                                <p class="text-[10px] text-slate-600">オフライン状態でも主要導線（起動→計測→結果確認）は<strong
+                                        class="text-teal-700">継続可能</strong></p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 3.3 試行回数 -->
+                    <section class="bg-slate-800 text-white rounded-md p-4 shadow-md">
+                        <h3 class="text-[13px] font-bold mb-3 flex items-center border-b border-slate-600 pb-2">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-400 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                            </svg>
+                            試行回数サマリ
+                        </h3>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-teal-900 bg-opacity-50 border border-teal-700 rounded p-3 text-center">
+                                <p class="text-[9px] text-slate-400 font-bold mb-0.5">端末数</p>
+                                <p class="text-2xl font-bold text-teal-300">3<span class="text-sm">台</span></p>
+                            </div>
+                            <div class="bg-cyan-900 bg-opacity-50 border border-cyan-700 rounded p-3 text-center">
+                                <p class="text-[9px] text-slate-400 font-bold mb-0.5">シナリオ</p>
+                                <p class="text-2xl font-bold text-cyan-300">4<span class="text-sm">種</span></p>
+                            </div>
+                            <div class="bg-slate-700 border border-slate-600 rounded p-3 text-center">
+                                <p class="text-[9px] text-slate-400 font-bold mb-0.5">合計試行</p>
+                                <p class="text-2xl font-bold text-slate-200">120<span class="text-sm">回</span></p>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-400 mt-2 text-center">各端末 × 各シナリオ × 10試行（最低）</p>
+                    </section>
+
+                </div>
+
+                <!-- ========== RIGHT COLUMN ========== -->
+                <div class="col-span-7 flex flex-col gap-4">
+
+                    <!-- 3. 試験設計 -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                            3. 試験設計
+                        </h3>
+
+                        <!-- 3.1 端末と環境 -->
+                        <h4 class="text-[11px] font-bold text-teal-700 mb-2">3.1 端末と環境</h4>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div class="bg-slate-50 border border-slate-100 rounded p-2.5">
+                                <p class="text-[10px] font-bold text-slate-700 mb-1">📱 端末</p>
+                                <p class="text-[9.5px] text-slate-600">iPhone 12 / 14 / 16 系を各1台以上（iOS最新版）</p>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-100 rounded p-2.5">
+                                <p class="text-[10px] font-bold text-slate-700 mb-1">🔧 設置条件</p>
+                                <p class="text-[9.5px] text-slate-600">安定した基準台（石定盤 or 同等）＋微傾斜治具（0.1°単位）</p>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-100 rounded p-2.5">
+                                <p class="text-[10px] font-bold text-slate-700 mb-1">📐 参照器</p>
+                                <p class="text-[9.5px] text-slate-600">校正済みデジタル傾斜計（分解能 0.1° 以下）</p>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-100 rounded p-2.5">
+                                <p class="text-[10px] font-bold text-slate-700 mb-1">📶 通信条件</p>
+                                <p class="text-[9.5px] text-slate-600">オンライン / オフライン（機内モード相当）を切替</p>
+                            </div>
+                        </div>
+
+                        <!-- 3.2 シナリオ -->
+                        <h4 class="text-[11px] font-bold text-teal-700 mb-2">3.2 試験シナリオ</h4>
+                        <div class="space-y-1.5">
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-slate-800 text-white text-[8px] font-bold w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                <div>
+                                    <p class="text-[10.5px] font-bold text-slate-700">標準計測シナリオ</p>
+                                    <p class="text-[9.5px] text-slate-500">起動 → 権限許可 → 静止計測 → 値記録</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-slate-800 text-white text-[8px] font-bold w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                <div>
+                                    <p class="text-[10.5px] font-bold text-slate-700">キャリブレーションシナリオ</p>
+                                    <p class="text-[9.5px] text-slate-500">1点校正・2点校正をそれぞれ実施し、補正前後の差分を評価</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-slate-800 text-white text-[8px] font-bold w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                <div>
+                                    <p class="text-[10.5px] font-bold text-slate-700">机水平調整シナリオ</p>
+                                    <p class="text-[9.5px] text-slate-500">故意に傾けた机で、ガイドに従い調整。収束回数と時間を計測</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-slate-800 text-white text-[8px] font-bold w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5">4</span>
+                                <div>
+                                    <p class="text-[10.5px] font-bold text-slate-700">異常系シナリオ</p>
+                                    <p class="text-[9.5px] text-slate-500">権限拒否、縦向き違反、オフライン起動、設定保存失敗（容量逼迫模擬）</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 4. 評価指標 -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm flex-1">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            4. 評価指標（KPI）
+                        </h3>
+                        <table class="w-full text-[10px] text-left border-collapse">
+                            <thead class="bg-slate-100 text-slate-600">
+                                <tr>
+                                    <th class="py-1.5 px-2 border border-slate-200 w-[22%]">指標</th>
+                                    <th class="py-1.5 px-2 border border-slate-200">計測方法</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-600">
+                                <tr>
+                                    <td class="py-1.5 px-2 border border-slate-200 bg-slate-50 font-bold text-teal-700">
+                                        計測精度</td>
+                                    <td class="py-1.5 px-2 border border-slate-200"><code
+                                            class="code-font text-[9px] bg-slate-100 px-1 rounded">|app値 - 参照器値|</code>
+                                        の平均 / 95パーセンタイル</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 border border-slate-200 bg-slate-50 font-bold text-teal-700">
+                                        再現性</td>
+                                    <td class="py-1.5 px-2 border border-slate-200">同一条件下の標準偏差</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 border border-slate-200 bg-slate-50 font-bold text-teal-700">
+                                        収束性能</td>
+                                    <td class="py-1.5 px-2 border border-slate-200">目標閾値到達までの再計測回数・総作業時間</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 border border-slate-200 bg-slate-50 font-bold text-teal-700">
+                                        運用性</td>
+                                    <td class="py-1.5 px-2 border border-slate-200">試行失敗率 ＋ オペレータ主観評価（5段階：わかりやすさ・再現しやすさ）
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-2 border border-slate-200 bg-slate-50 font-bold text-teal-700">
+                                        信頼性</td>
+                                    <td class="py-1.5 px-2 border border-slate-200">オフラインシナリオ成功率 / クラッシュ・フリーズ発生率</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer
+                class="mt-4 pt-2.5 border-t border-slate-200 flex justify-between items-center text-[8px] text-slate-400 code-font">
+                <p>PoC Validation Plan // High-Precision Sensor & Table-Level Guide</p>
+                <p>Page 1 / 2</p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Screen spacer -->
+    <div class="screen-gap"></div>
+
+    <!-- ============================================================= -->
+    <!-- PAGE 2                                                         -->
+    <!-- ============================================================= -->
+    <div class="a4-portrait relative">
+
+        <!-- Top Bar -->
+        <div class="h-3 bg-gradient-to-r from-cyan-900 via-teal-700 to-cyan-900 w-full shrink-0"></div>
+
+        <div class="flex-1 flex flex-col px-10 pt-5 pb-6">
+
+            <!-- Header -->
+            <header class="flex justify-between items-end mb-5 border-b-2 border-slate-200 pb-3">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 tracking-widest code-font mb-1">PROJECT <span
+                            class="text-teal-600">HIGH-PRECISION-SENSOR</span> // PoC VALIDATION PLAN</p>
+                    <h1 class="text-[24px] font-bold text-slate-800 tracking-tight leading-tight">
+                        実証試験（PoC）計画書
+                        <span class="text-base text-slate-500 font-medium ml-2">─ 判定基準・体制・スケジュール</span>
+                    </h1>
+                </div>
+                <p
+                    class="text-[10px] text-slate-400 font-bold bg-slate-50 border border-slate-200 px-2 py-1 rounded code-font shrink-0">
+                    2026.02.24</p>
+            </header>
+
+            <main class="flex-1 grid grid-cols-12 gap-5">
+
+                <!-- ========== LEFT COLUMN ========== -->
+                <div class="col-span-5 flex flex-col gap-4">
+
+                    <!-- 5. 合否基準 Go -->
+                    <section class="border-l-4 border-teal-500 bg-teal-50 bg-opacity-60 rounded-r-md p-4">
+                        <h3 class="text-[13px] font-bold text-slate-800 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            5. 合否基準（Go / No-Go）
+                        </h3>
+
+                        <p class="text-[10px] font-bold text-teal-700 mb-1.5 flex items-center gap-1">
+                            <span class="badge-go">GO</span> 条件（すべて満たすこと）
+                        </p>
+                        <div class="space-y-1.5 mb-3">
+                            <div class="bg-white p-2 rounded border border-teal-100 shadow-sm flex items-start gap-2">
+                                <span class="text-teal-500 shrink-0 mt-0.5">✓</span>
+                                <p class="text-[10px] text-slate-600">95パーセンタイル誤差が <strong class="text-teal-700">±0.5°
+                                        以内</strong></p>
+                            </div>
+                            <div class="bg-white p-2 rounded border border-teal-100 shadow-sm flex items-start gap-2">
+                                <span class="text-teal-500 shrink-0 mt-0.5">✓</span>
+                                <p class="text-[10px] text-slate-600">机水平ガイド <strong
+                                        class="text-teal-700">80%以上</strong>が2回以内で到達</p>
+                            </div>
+                            <div class="bg-white p-2 rounded border border-teal-100 shadow-sm flex items-start gap-2">
+                                <span class="text-teal-500 shrink-0 mt-0.5">✓</span>
+                                <p class="text-[10px] text-slate-600">全シナリオ成功率 <strong
+                                        class="text-teal-700">95%以上</strong></p>
+                            </div>
+                            <div class="bg-white p-2 rounded border border-teal-100 shadow-sm flex items-start gap-2">
+                                <span class="text-teal-500 shrink-0 mt-0.5">✓</span>
+                                <p class="text-[10px] text-slate-600">重大運用障害（手順中断級）が <strong
+                                        class="text-teal-700">0件</strong></p>
+                            </div>
+                        </div>
+
+                        <p class="text-[10px] font-bold text-red-600 mb-1.5 flex items-center gap-1">
+                            <span class="badge-nogo">NO-GO</span> 条件（1つでも該当で中止）
+                        </p>
+                        <div class="space-y-1.5">
+                            <div class="bg-red-50 p-2 rounded border border-red-100 shadow-sm flex items-start gap-2">
+                                <span class="text-red-400 shrink-0 mt-0.5">✗</span>
+                                <p class="text-[10px] text-slate-600">端末依存で再現する未解決不具合が残る</p>
+                            </div>
+                            <div class="bg-red-50 p-2 rounded border border-red-100 shadow-sm flex items-start gap-2">
+                                <span class="text-red-400 shrink-0 mt-0.5">✗</span>
+                                <p class="text-[10px] text-slate-600">権限拒否/オフライン時に復旧不能ケースが5%以上</p>
+                            </div>
+                            <div class="bg-red-50 p-2 rounded border border-red-100 shadow-sm flex items-start gap-2">
+                                <span class="text-red-400 shrink-0 mt-0.5">✗</span>
+                                <p class="text-[10px] text-slate-600">作業者評価が平均3.0未満</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 8. 記録フォーマット -->
+                    <section class="bg-slate-800 text-white rounded-md p-4 shadow-md flex-1">
+                        <h3 class="text-[13px] font-bold mb-3 flex items-center border-b border-slate-600 pb-2">
+                            <svg class="w-4 h-4 mr-1.5 text-teal-400 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            8. 記録フォーマット（最小）
+                        </h3>
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">session_id</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">app_type</span>
+                                <span class="text-[8px] text-slate-500">(tilt / table-level)</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">device_model</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">ios_version</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">scenario</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">settings_snapshot</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">reference_value</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">measured_value</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">elapsed_time_sec</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">result</span>
+                                <span class="text-[8px] text-slate-500">(pass / fail)</span>
+                            </div>
+                            <div class="col-span-2 flex items-center gap-1.5">
+                                <span class="text-teal-400 text-[9px]">●</span>
+                                <span class="code-font text-[9.5px] text-slate-300">failure_reason</span>
+                                <span class="text-[8px] text-slate-500">（該当時）</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ========== RIGHT COLUMN ========== -->
+                <div class="col-span-7 flex flex-col gap-4">
+
+                    <!-- 6. 実施体制 -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            6. 実施体制
+                        </h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-teal-50 border border-teal-100 rounded p-2.5 text-center">
+                                <p class="text-[10px] font-bold text-teal-800">試験責任者</p>
+                                <p class="text-lg font-bold text-teal-700">1<span
+                                        class="text-[10px] font-normal">名</span></p>
+                                <p class="text-[8.5px] text-slate-500">全体進行・判定</p>
+                            </div>
+                            <div class="bg-cyan-50 border border-cyan-100 rounded p-2.5 text-center">
+                                <p class="text-[10px] font-bold text-cyan-800">実験担当</p>
+                                <p class="text-lg font-bold text-cyan-700">2<span
+                                        class="text-[10px] font-normal">名</span></p>
+                                <p class="text-[8.5px] text-slate-500">計測実施・記録</p>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-200 rounded p-2.5 text-center">
+                                <p class="text-[10px] font-bold text-slate-700">記録/分析担当</p>
+                                <p class="text-lg font-bold text-slate-600">1<span
+                                        class="text-[10px] font-normal">名</span></p>
+                                <p class="text-[8.5px] text-slate-500">データ集計・統計処理</p>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-200 rounded p-2.5 text-center">
+                                <p class="text-[10px] font-bold text-slate-700">開発担当</p>
+                                <p class="text-lg font-bold text-slate-600">1<span
+                                        class="text-[10px] font-normal">名</span></p>
+                                <p class="text-[8.5px] text-slate-500">不具合一次解析</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 7. スケジュール -->
+                    <section class="bg-white border border-slate-200 rounded-md p-4 shadow-sm">
+                        <h3
+                            class="text-[13px] font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-slate-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            7. スケジュール（2週間）
+                        </h3>
+                        <div class="space-y-2">
+                            <!-- Timeline -->
+                            <div class="flex items-start gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-3 h-3 bg-teal-500 rounded-full shrink-0"></div>
+                                    <div class="w-0.5 h-8 bg-slate-200"></div>
+                                </div>
+                                <div class="flex-1 -mt-0.5">
+                                    <p class="text-[10.5px] font-bold text-slate-700">Day 1–2：<span
+                                            class="text-teal-600">環境準備</span></p>
+                                    <p class="text-[9.5px] text-slate-500">試験環境準備、端末初期化、治具確認</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-3 h-3 bg-cyan-500 rounded-full shrink-0"></div>
+                                    <div class="w-0.5 h-8 bg-slate-200"></div>
+                                </div>
+                                <div class="flex-1 -mt-0.5">
+                                    <p class="text-[10.5px] font-bold text-slate-700">Day 3–6：<span
+                                            class="text-cyan-600">標準・校正シナリオ実施</span></p>
+                                    <p class="text-[9.5px] text-slate-500">標準計測 + キャリブレーションシナリオ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-3 h-3 bg-cyan-500 rounded-full shrink-0"></div>
+                                    <div class="w-0.5 h-8 bg-slate-200"></div>
+                                </div>
+                                <div class="flex-1 -mt-0.5">
+                                    <p class="text-[10.5px] font-bold text-slate-700">Day 7–9：<span
+                                            class="text-cyan-600">机水平・異常系シナリオ</span></p>
+                                    <p class="text-[9.5px] text-slate-500">机水平調整 + 異常系シナリオ実施</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-3 h-3 bg-slate-400 rounded-full shrink-0"></div>
+                                    <div class="w-0.5 h-8 bg-slate-200"></div>
+                                </div>
+                                <div class="flex-1 -mt-0.5">
+                                    <p class="text-[10.5px] font-bold text-slate-700">Day 10–11：<span
+                                            class="text-slate-500">データ分析・再試験</span></p>
+                                    <p class="text-[9.5px] text-slate-500">結果集計、統計処理、必要に応じて再試験</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-3 h-3 bg-teal-700 rounded-full shrink-0"></div>
+                                </div>
+                                <div class="flex-1 -mt-0.5">
+                                    <p class="text-[10.5px] font-bold text-slate-700">Day 12–14：<span
+                                            class="text-teal-700">判定会・改善項目確定</span></p>
+                                    <p class="text-[9.5px] text-slate-500">Go/No-Go判定、改善項目のリストアップ</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 9. リスクと対策 -->
+                    <section class="bg-slate-50 border border-slate-200 rounded-md p-4 flex-1">
+                        <h3 class="text-[12px] font-bold text-slate-700 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-amber-500 shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            9. リスクと対策
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-amber-100 text-amber-700 text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">R1</span>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-700">端末個体差で結果がぶれる</p>
+                                    <p class="text-[9px] text-slate-500">→ 複数端末で同一シナリオを必ず実施</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-amber-100 text-amber-700 text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">R2</span>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-700">作業者手順差で結果がぶれる</p>
+                                    <p class="text-[9px] text-slate-500">→ 事前に統一SOPを配布し、読み合わせを実施</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-amber-100 text-amber-700 text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">R3</span>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-700">参照器の信頼性不足</p>
+                                    <p class="text-[9px] text-slate-500">→ 校正履歴ある参照器を使用、ゼロ点確認を毎日実施</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span
+                                    class="bg-amber-100 text-amber-700 text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5">R4</span>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-700">試験中断（通信・電池）</p>
+                                    <p class="text-[9px] text-slate-500">→ オフライン前提手順を準備し、予備端末を確保</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer
+                class="mt-4 pt-2.5 border-t border-slate-200 flex justify-between items-center text-[8px] text-slate-400 code-font">
+                <p>作成: Codex＋GPT-5 // 更新日: 2026-02-24</p>
+                <p>Page 2 / 2</p>
+            </footer>
+        </div>
+    </div>
+
+</body>
+
+</html>
