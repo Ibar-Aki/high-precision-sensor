@@ -32,7 +32,7 @@ High-precision-sensor/
 │   ├── high-precision-sensor/      # 高精度傾斜計のドキュメント
 │   └── table-level/                # 机水平ガイドのドキュメント
 ├── tests/
-│   ├── *.test.js                   # ユニットテスト (47件)
+│   ├── *.test.js                   # ユニットテスト (50件)
 │   ├── e2e-offline-smoke.mjs
 │   └── e2e-table-level-smoke.mjs
 ├── .editorconfig                   # コードスタイル定義

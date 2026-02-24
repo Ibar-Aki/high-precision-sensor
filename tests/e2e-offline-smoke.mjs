@@ -120,6 +120,9 @@ async function run() {
       return Boolean(reg);
     });
     await page.reload({ waitUntil: 'networkidle' });
+    await page.evaluate(async () => {
+      await fetch('/docs/INDEX.md');
+    });
 
     const cachePaths = await page.evaluate(async () => {
       const cache = await caches.open('tilt-sensor-v6-static');
@@ -147,6 +150,7 @@ async function run() {
     requiredAssets.forEach((asset) => {
       assert(cachePaths.includes(asset), `ServiceWorkerキャッシュ不足: ${asset}`);
     });
+    assert(!cachePaths.includes('/docs/INDEX.md'), '非対象ファイルがServiceWorkerキャッシュされています: /docs/INDEX.md');
 
     await page.click('#btn-start');
     await page.waitForSelector('#main-screen.active', { timeout: 5000 });

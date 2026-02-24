@@ -20,7 +20,7 @@
 | `assets/js/modules/UIManager.js` | 数値表示、ステータス更新、描画 |
 | `.editorconfig` | コードスタイル定義（改行コード LF 統一等） |
 | `.gitattributes` | Git 改行コード制御 |
-| `tests/*.test.js` | ユニットテスト（47件） |
+| `tests/*.test.js` | ユニットテスト（50件） |
 | `tests/e2e-offline-smoke.mjs` | オフライン起動と主要動作のE2Eスモーク |
 
 ## 3. ハイブリッド処理フロー
@@ -66,7 +66,7 @@ graph TD
 
 ## 6. ローカル検証
 
-1. ユニットテスト: `npm test -- --run`（47件）
+1. ユニットテスト: `npm test -- --run`（50件）
 2. E2Eスモーク（メイン）: `npm run test:e2e-smoke`
 3. E2Eスモーク（table-level）: `npm run test:e2e:table-level`
 4. 全E2E一括: `npm run test:e2e:all`

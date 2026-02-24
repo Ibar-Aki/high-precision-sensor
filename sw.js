@@ -1,6 +1,9 @@
 const CACHE_VERSION = 'tilt-sensor-v6';
 const CACHE_PREFIX = 'tilt-sensor-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
+const SCOPE_URL = new URL(self.registration.scope);
+const SCOPE_PATH = SCOPE_URL.pathname.endsWith('/') ? SCOPE_URL.pathname : `${SCOPE_URL.pathname}/`;
+const INDEX_URL = new URL('./index.html', SCOPE_URL).toString();
 const APP_SHELL = [
     './',
     './index.html',
@@ -12,8 +15,8 @@ const APP_SHELL = [
     './assets/js/modules/DataLogger.js',
     './assets/js/modules/KalmanFilter1D.js',
     './assets/js/modules/HybridStaticUtils.js',
-    '/shared/js/KalmanFilter1D.js',
-    '/shared/js/HybridStaticUtils.js',
+    './shared/js/KalmanFilter1D.js',
+    './shared/js/HybridStaticUtils.js',
     './assets/js/modules/SettingsManager.js',
     './assets/js/modules/ToastManager.js',
     './assets/js/modules/LifecycleManager.js',
@@ -22,6 +25,15 @@ const APP_SHELL = [
     './assets/icons/icon-192.svg',
     './assets/icons/icon-512.svg',
     './manifest.json'
+];
+const CACHEABLE_EXACT_PATHS = new Set([
+    SCOPE_PATH,
+    new URL('./index.html', SCOPE_URL).pathname,
+    new URL('./manifest.json', SCOPE_URL).pathname
+]);
+const CACHEABLE_PREFIX_PATHS = [
+    new URL('./assets/', SCOPE_URL).pathname,
+    new URL('./shared/', SCOPE_URL).pathname
 ];
 
 self.addEventListener('install', (event) => {
@@ -52,16 +64,57 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(request.url);
     if (url.origin !== self.location.origin) return;
 
-    const isHtml = request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html');
+    const isHtml = request.mode === 'navigate' || request.destination === 'document' || request.headers.get('accept')?.includes('text/html');
     if (isHtml) {
-        event.respondWith(networkFirstHtml(request));
+        event.respondWith(networkFirstHtml(request, url));
+        return;
+    }
+
+    if (!isCacheableAssetPath(url.pathname)) {
         return;
     }
 
     event.respondWith(cacheFirstAsset(request));
 });
 
-async function networkFirstHtml(request) {
+function isCacheableAssetPath(pathname) {
+    if (CACHEABLE_EXACT_PATHS.has(pathname)) return true;
+    return CACHEABLE_PREFIX_PATHS.some((prefix) => pathname.startsWith(prefix));
+}
+
+function isTopLevelHtmlPath(pathname) {
+    if (SCOPE_PATH === '/') {
+        return pathname === '/' || pathname === '/index.html';
+    }
+    return pathname === SCOPE_PATH || pathname === `${SCOPE_PATH}index.html`;
+}
+
+async function networkFirstHtml(request, url) {
+    try {
+        const response = await fetch(request);
+        if (response.ok && response.type === 'basic' && isTopLevelHtmlPath(url.pathname)) {
+            const cache = await caches.open(STATIC_CACHE);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        const cacheHit = await caches.match(request, { ignoreSearch: true });
+        if (cacheHit) return cacheHit;
+        if (isTopLevelHtmlPath(url.pathname)) {
+            const indexFallback = await caches.match(INDEX_URL);
+            if (indexFallback) return indexFallback;
+        }
+        return new Response('Offline', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+    }
+}
+
+async function cacheFirstAsset(request) {
+    const cacheHit = await caches.match(request, { ignoreSearch: true });
+    if (cacheHit) return cacheHit;
+
     try {
         const response = await fetch(request);
         if (response.ok && response.type === 'basic') {
@@ -70,20 +123,8 @@ async function networkFirstHtml(request) {
         }
         return response;
     } catch {
-        const cacheHit = await caches.match(request);
-        if (cacheHit) return cacheHit;
-        return caches.match('./index.html');
+        const fallback = await caches.match(request, { ignoreSearch: true });
+        if (fallback) return fallback;
+        throw new Error('network_error');
     }
-}
-
-async function cacheFirstAsset(request) {
-    const cacheHit = await caches.match(request);
-    if (cacheHit) return cacheHit;
-
-    const response = await fetch(request);
-    if (response.ok && response.type === 'basic') {
-        const cache = await caches.open(STATIC_CACHE);
-        cache.put(request, response.clone());
-    }
-    return response;
 }
