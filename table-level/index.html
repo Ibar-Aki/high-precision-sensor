@@ -2,7 +2,10 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="水平ガイド">
   <title>机の水平ガイド</title>
   <meta name="theme-color" content="#0f172a">
   <meta name="description" content="机の調整ボルトを何回転させるかを表示と音声で案内します。">
@@ -28,6 +31,7 @@
       <ol>
         <li>iPhoneの「設定」を開く</li>
         <li>「Safari」→「モーションと画面の向きのアクセス」を許可</li>
+        <li>https:// で始まるURLをSafariで開く（http:// では利用不可）</li>
         <li>この画面に戻り再度「センサーを有効化」を押す</li>
       </ol>
       <p id="permission-help-code" class="permission-help-code">状態コード: PERMISSION_HELP_READY</p>
@@ -37,7 +41,7 @@
 
   <section id="app-screen" class="screen">
     <header class="header">
-      <h1>Table Level Guide</h1>
+      <h1 class="app-title">TableLevelGuide</h1>
       <div id="status-text" class="status" data-status="active">待機中</div>
     </header>
 
@@ -47,15 +51,18 @@
         <div class="telemetry-grid">
           <div>ピッチ: <strong id="pitch-value">0.000°</strong></div>
           <div>ロール: <strong id="roll-value">0.000°</strong></div>
-          <div>モード: <strong id="measurement-mode">active</strong></div>
-          <div>安定度: <strong id="stability-value">0%</strong></div>
+          <div class="aux-telemetry">モード: <strong id="measurement-mode">active</strong></div>
+          <div class="aux-telemetry">安定度: <strong id="stability-value">0%</strong></div>
         </div>
 
         <div class="actions">
           <button id="start-measure-btn" class="btn primary">計測開始</button>
           <button id="remeasure-btn" class="btn">再計測</button>
           <button id="manual-confirm-btn" class="btn warning">手動確定</button>
+          <button id="calibrate-1pt-btn" class="btn">1点校正</button>
+          <button id="calibrate-2pt-btn" class="btn">2点校正</button>
         </div>
+        <p id="calibration-step-text" class="note calibration-note">校正待機中</p>
 
         <div id="level-banner" class="level-banner">水平達成</div>
         <div id="warning-box" class="warning-box"></div>

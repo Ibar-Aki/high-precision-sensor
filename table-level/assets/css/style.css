@@ -42,7 +42,15 @@ body {
   padding: 16px;
 }
 
+.app-title {
+  margin: 0;
+  white-space: nowrap;
+  font-size: clamp(1.8rem, 8vw, 2.4rem);
+  letter-spacing: 0.01em;
+}
+
 .status {
+  display: none;
   padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -80,6 +88,10 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.aux-telemetry {
+  display: none;
 }
 
 .actions {
@@ -149,7 +161,7 @@ body {
   font-size: 13px;
 }
 
-.form-grid input,
+.form-grid input:not([type='checkbox']):not([type='radio']),
 .form-grid select {
   width: 100%;
   border: 1px solid #3a4f75;
@@ -162,7 +174,18 @@ body {
 .form-grid .check {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.form-grid .check input {
+  width: auto;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.calibration-note {
+  margin-top: 8px;
 }
 
 #bolt-custom-row {

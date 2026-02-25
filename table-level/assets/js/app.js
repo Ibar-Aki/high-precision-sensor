@@ -13,10 +13,17 @@ const BOLT_PITCH_MAP = {
 const MIN_SAMPLES_TO_FINALIZE = 10;
 const ACTIVE_LOOP_INTERVAL_MS = 1000 / 30;
 const IDLE_LOOP_INTERVAL_MS = 120;
+const SENSOR_SIGNAL_TIMEOUT_MS = 2500;
 const MODE_LABEL = {
   active: '計測中',
   locking: '安定化中',
   measuring: '確定値'
+};
+const CALIBRATION_STEP_TEXT = {
+  idle: '校正待機中',
+  awaiting_first: '2点校正: 1点目を記録してください',
+  awaiting_second: '2点校正: 端末を180度回転して2点目を記録してください',
+  completed: '2点校正が完了しました'
 };
 
 function createSessionId(prefix = 'TL') {
@@ -25,6 +32,14 @@ function createSessionId(prefix = 'TL') {
   const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const random = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0').toUpperCase();
   return `${prefix}-${stamp}-${random}`;
+}
+
+function canUseDeviceOrientationOnCurrentOrigin() {
+  if (globalThis.isSecureContext) {
+    return true;
+  }
+  const host = globalThis.location?.hostname ?? '';
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
 class TableLevelApp {
@@ -50,6 +65,9 @@ class TableLevelApp {
     this._lastLoopUpdateAt = 0;
     this._loopFrameId = null;
     this._destroyed = false;
+    this._lastSensorEventAt = 0;
+    this._sensorSignalWarningShown = false;
+    this._sensorSignalTimeoutMs = SENSOR_SIGNAL_TIMEOUT_MS;
     this._lastStatusCode = 'INIT';
     this._sessionId = createSessionId();
     this._orientationHandler = (event) => this._onOrientation(event);
@@ -66,6 +84,7 @@ class TableLevelApp {
 
     this._bindElements();
     this._bindEvents();
+    this._setCalibrationStepUi('idle');
     this._applySettingsToForm();
     this._applySettingsToSensor();
     this._toggleBoltCustomInput();
@@ -106,6 +125,9 @@ class TableLevelApp {
       startMeasureButton: byId('start-measure-btn'),
       remeasureButton: byId('remeasure-btn'),
       manualConfirmButton: byId('manual-confirm-btn'),
+      calibrateOnePointButton: byId('calibrate-1pt-btn'),
+      calibrateTwoPointButton: byId('calibrate-2pt-btn'),
+      calibrationStepText: byId('calibration-step-text'),
       saveSettingsButton: byId('save-settings-btn'),
       resetSettingsButton: byId('reset-settings-btn'),
       tableWidth: byId('table-width'),
@@ -146,6 +168,8 @@ class TableLevelApp {
     this._addListener(this.els.startMeasureButton, 'click', () => this.startMeasurement());
     this._addListener(this.els.remeasureButton, 'click', () => this.startMeasurement());
     this._addListener(this.els.manualConfirmButton, 'click', () => this._confirmMeasurementManually());
+    this._addListener(this.els.calibrateOnePointButton, 'click', () => this._handleSinglePointCalibration());
+    this._addListener(this.els.calibrateTwoPointButton, 'click', () => this._handleTwoPointCalibration());
     this._addListener(this.els.settingsForm, 'submit', (event) => {
       event.preventDefault();
     });
@@ -189,6 +213,12 @@ class TableLevelApp {
       this._showPermissionHelp('SENSOR_UNSUPPORTED');
       return;
     }
+    if (!canUseDeviceOrientationOnCurrentOrigin()) {
+      this._setStatus('error', 'センサー利用にはHTTPSが必要です。https:// でアクセスしてください。');
+      this._setStatusCode('INSECURE_CONTEXT');
+      this._showPermissionHelp('INSECURE_CONTEXT');
+      return;
+    }
 
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
       try {
@@ -213,6 +243,8 @@ class TableLevelApp {
     }
 
     this.permissionGranted = true;
+    this._lastSensorEventAt = performance.now();
+    this._sensorSignalWarningShown = false;
     this._hidePermissionHelp();
     this.els.splash.classList.remove('active');
     this.els.app.classList.add('active');
@@ -223,7 +255,23 @@ class TableLevelApp {
   _onOrientation(event) {
     if (!this.permissionGranted) return;
     if (!this.isPortrait) return;
-    this.sensor.process(event.beta, event.gamma);
+    const beta = event?.beta;
+    const gamma = event?.gamma;
+    if (!Number.isFinite(beta) || !Number.isFinite(gamma)) return;
+
+    this._lastSensorEventAt = performance.now();
+    if (this._sensorSignalWarningShown) {
+      this._sensorSignalWarningShown = false;
+      if (this.isMeasuring) {
+        this._setStatus('active', '計測中... 端末を動かさず待機してください。');
+        this._setStatusCode('MEASUREMENT_ACTIVE');
+      } else {
+        this._setStatus('active', 'センサー信号を受信しました。計測開始してください。');
+        this._setStatusCode('SENSOR_READY');
+      }
+    }
+
+    this.sensor.process(beta, gamma);
   }
 
   startMeasurement() {
@@ -373,6 +421,9 @@ class TableLevelApp {
 
       if (timestamp - this._lastLoopUpdateAt >= targetInterval) {
         if (canRenderTelemetry) {
+          this._monitorSensorSignal();
+        }
+        if (canRenderTelemetry) {
           this._renderTelemetry();
         }
         if (canUpdateMeasurementFlow) {
@@ -392,10 +443,14 @@ class TableLevelApp {
 
     this.els.pitchValue.textContent = `${pitchDeg.toFixed(3)}°`;
     this.els.rollValue.textContent = `${rollDeg.toFixed(3)}°`;
-    this.els.measurementMode.textContent = MODE_LABEL[info.mode] ?? MODE_LABEL.active;
+    if (this.els.measurementMode) {
+      this.els.measurementMode.textContent = MODE_LABEL[info.mode] ?? MODE_LABEL.active;
+    }
 
     const stability = Math.min(1, info.staticSamples / Math.max(1, this.settings.averagingSampleCount));
-    this.els.stabilityValue.textContent = `${Math.round(stability * 100)}%`;
+    if (this.els.stabilityValue) {
+      this.els.stabilityValue.textContent = `${Math.round(stability * 100)}%`;
+    }
   }
 
   _updateMeasurementFlow() {
@@ -478,7 +533,7 @@ class TableLevelApp {
       this.els.warningBox.textContent = '';
     }
 
-    const measuredMsg = forced ? '手動確定で調整指示を表示しました。' : '計測安定。調整指示を表示しました。';
+    const measuredMsg = '調整指示を表示しました。';
     this._setStatus('active', measuredMsg);
     this._setStatusCode(forced ? 'MEASUREMENT_FINALIZED_MANUAL' : 'MEASUREMENT_FINALIZED_AUTO');
 
@@ -571,6 +626,87 @@ class TableLevelApp {
     this._lastStatus = { type, text };
     this.els.statusText.dataset.status = type;
     this.els.statusText.textContent = text;
+  }
+
+  _handleSinglePointCalibration() {
+    const result = this.sensor.calibrateOnePoint?.();
+    if (!result?.ok) {
+      this._setStatus('warning', '1点校正に失敗しました。センサー値受信後に再実行してください。');
+      this._setStatusCode('CAL1P_FAILED');
+      return;
+    }
+    this._setCalibrationStepUi('idle');
+    this._setStatus('active', '1点校正を適用しました。');
+    this._setStatusCode('CAL1P_DONE');
+  }
+
+  _handleTwoPointCalibration() {
+    const state = this.sensor.getTwoPointCalibrationState?.() ?? { step: 'idle' };
+    if (state.step === 'idle') {
+      this.sensor.startTwoPointCalibration?.();
+      this._setCalibrationStepUi('awaiting_first');
+      this._setStatus('active', '2点校正を開始しました。');
+      this._setStatusCode('CAL2P_STEP1_PENDING');
+      return;
+    }
+
+    const result = this.sensor.captureTwoPointCalibrationPoint?.();
+    if (result?.done && result.ok) {
+      this._setCalibrationStepUi('completed');
+      this._setStatus('active', '2点校正を適用しました。');
+      this._setStatusCode('CAL2P_DONE');
+      return;
+    }
+    if (result?.ok && result.step === 'awaiting_second') {
+      this._setCalibrationStepUi('awaiting_second');
+      this._setStatus('active', '1点目を記録しました。2点目を記録してください。');
+      this._setStatusCode('CAL2P_STEP2_PENDING');
+      return;
+    }
+
+    if (result?.reason === 'timeout') {
+      this._setCalibrationStepUi('idle');
+      this._setStatus('warning', '2点校正がタイムアウトしました。最初からやり直してください。');
+      this._setStatusCode('CAL2P_TIMEOUT');
+      return;
+    }
+
+    if (result?.reason === 'no_sample') {
+      this._setStatus('warning', '2点校正に必要なセンサー値が不足しています。');
+      this._setStatusCode('CAL2P_NO_SAMPLE');
+      return;
+    }
+
+    this._setCalibrationStepUi('idle');
+    this._setStatus('warning', '2点校正に失敗しました。');
+    this._setStatusCode('CAL2P_FAILED');
+  }
+
+  _setCalibrationStepUi(step) {
+    if (this.els.calibrationStepText) {
+      this.els.calibrationStepText.textContent = CALIBRATION_STEP_TEXT[step] ?? CALIBRATION_STEP_TEXT.idle;
+    }
+    if (this.els.calibrateTwoPointButton) {
+      if (step === 'awaiting_first') {
+        this.els.calibrateTwoPointButton.textContent = '1点目を記録';
+      } else if (step === 'awaiting_second') {
+        this.els.calibrateTwoPointButton.textContent = '2点目を記録';
+      } else {
+        this.els.calibrateTwoPointButton.textContent = '2点校正';
+      }
+    }
+  }
+
+  _monitorSensorSignal() {
+    if (!this.permissionGranted) return;
+    if (this._sensorSignalWarningShown) return;
+    if (this.sensor.getSampleCount() > 0) return;
+    if (performance.now() - this._lastSensorEventAt < this._sensorSignalTimeoutMs) return;
+
+    this._sensorSignalWarningShown = true;
+    this._setStatus('warning', 'センサー値を受信できません。Safari設定とHTTPSアクセスを確認してください。');
+    this._setStatusCode('SENSOR_SIGNAL_MISSING');
+    this._showPermissionHelp('SENSOR_SIGNAL_MISSING');
   }
 
   _updateOrientationGuard() {

@@ -240,7 +240,7 @@ async function run() {
     await page.click('#manual-confirm-btn');
     await page.waitForFunction(() => {
       const status = document.getElementById('status-text');
-      return Boolean(status?.textContent?.includes('手動確定'));
+      return Boolean(status?.textContent?.includes('調整指示'));
     }, null, { timeout: 5000 });
 
     await context.setOffline(true);

@@ -28,6 +28,14 @@ export class TableLevelSensor {
     this.phonePitchAxis = options.phonePitchAxis ?? 'depth';
     this.invertPitch = Boolean(options.invertPitch);
     this.invertRoll = Boolean(options.invertRoll);
+    this.calibPitch = 0;
+    this.calibRoll = 0;
+    this.twoPointCalibrationTimeoutMs = 30000;
+    this.twoPointCalibration = {
+      step: 'idle',
+      firstPoint: null,
+      startedAt: 0
+    };
 
     this.rawPitch = 0;
     this.rawRoll = 0;
@@ -58,6 +66,8 @@ export class TableLevelSensor {
     this.staticPitchSum = 0;
     this.staticRollSum = 0;
     this.staticSampleCount = 0;
+
+    this.loadCalibration();
   }
 
   process(beta, gamma) {
@@ -69,8 +79,8 @@ export class TableLevelSensor {
     this.rawPitch = beta;
     this.rawRoll = gamma;
 
-    const filteredPitch = this.kfPitch.update(beta);
-    const filteredRoll = this.kfRoll.update(gamma);
+    const filteredPitch = this.kfPitch.update(beta) - this.calibPitch;
+    const filteredRoll = this.kfRoll.update(gamma) - this.calibRoll;
 
     this._updateMotionWindow(filteredPitch, filteredRoll);
     const staticDetected = this._isStaticDetected();
@@ -135,6 +145,142 @@ export class TableLevelSensor {
     if (typeof invertRoll === 'boolean') {
       this.invertRoll = invertRoll;
     }
+  }
+
+  loadCalibration() {
+    if (typeof localStorage === 'undefined') {
+      return { ok: false, reason: 'storage_unavailable' };
+    }
+    try {
+      const raw = localStorage.getItem('table_level_sensor_calibration_v1');
+      if (!raw) return { ok: true, loaded: false };
+      const parsed = JSON.parse(raw);
+      if (Number.isFinite(parsed?.calibPitch) && Number.isFinite(parsed?.calibRoll)) {
+        this.calibPitch = parsed.calibPitch;
+        this.calibRoll = parsed.calibRoll;
+        return { ok: true, loaded: true };
+      }
+      return { ok: true, loaded: false };
+    } catch (error) {
+      return { ok: false, reason: this._storageErrorReason(error) };
+    }
+  }
+
+  saveCalibration() {
+    if (typeof localStorage === 'undefined') {
+      return { ok: false, reason: 'storage_unavailable' };
+    }
+    try {
+      localStorage.setItem('table_level_sensor_calibration_v1', JSON.stringify({
+        calibPitch: this.calibPitch,
+        calibRoll: this.calibRoll
+      }));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, reason: this._storageErrorReason(error) };
+    }
+  }
+
+  calibrateOnePoint() {
+    if (!this._canCaptureCalibrationPoint()) {
+      return { ok: false, reason: 'no_sample' };
+    }
+    const offsetPitch = this.pitch;
+    const offsetRoll = this.roll;
+    this.calibPitch += offsetPitch;
+    this.calibRoll += offsetRoll;
+    const saveResult = this.saveCalibration();
+    this.resetMeasurementState();
+    this.cancelTwoPointCalibration();
+    return {
+      ok: saveResult.ok,
+      reason: saveResult.reason,
+      adjustment: {
+        pitch: offsetPitch,
+        roll: offsetRoll
+      }
+    };
+  }
+
+  startTwoPointCalibration() {
+    this.twoPointCalibration.step = 'awaiting_first';
+    this.twoPointCalibration.firstPoint = null;
+    this.twoPointCalibration.startedAt = 0;
+    return { ok: true, step: this.twoPointCalibration.step };
+  }
+
+  captureTwoPointCalibrationPoint() {
+    const step = this.twoPointCalibration.step;
+    if (step === 'idle') {
+      return { ok: false, reason: 'not_started' };
+    }
+    if (step === 'awaiting_second' && this._isTwoPointCalibrationExpired()) {
+      this.cancelTwoPointCalibration();
+      return { ok: false, reason: 'timeout' };
+    }
+    if (!this._canCaptureCalibrationPoint()) {
+      return { ok: false, reason: 'no_sample' };
+    }
+
+    if (step === 'awaiting_first') {
+      this.twoPointCalibration.firstPoint = {
+        pitch: this.pitch,
+        roll: this.roll
+      };
+      this.twoPointCalibration.step = 'awaiting_second';
+      this.twoPointCalibration.startedAt = Date.now();
+      return { ok: true, step: 'awaiting_second' };
+    }
+
+    if (step === 'awaiting_second') {
+      const first = this.twoPointCalibration.firstPoint;
+      const secondPitch = this.pitch;
+      const secondRoll = this.roll;
+      const offsetPitch = (first.pitch + secondPitch) / 2;
+      const offsetRoll = (first.roll + secondRoll) / 2;
+
+      this.calibPitch += offsetPitch;
+      this.calibRoll += offsetRoll;
+      const saveResult = this.saveCalibration();
+      this.resetMeasurementState();
+      this.cancelTwoPointCalibration();
+
+      return {
+        ok: saveResult.ok,
+        reason: saveResult.reason,
+        done: true,
+        step: 'completed',
+        adjustment: {
+          pitch: offsetPitch,
+          roll: offsetRoll
+        }
+      };
+    }
+
+    return { ok: false, reason: 'invalid_state' };
+  }
+
+  cancelTwoPointCalibration() {
+    this.twoPointCalibration.step = 'idle';
+    this.twoPointCalibration.firstPoint = null;
+    this.twoPointCalibration.startedAt = 0;
+    return { ok: true };
+  }
+
+  getTwoPointCalibrationState() {
+    const step = this.twoPointCalibration.step;
+    const startedAt = this.twoPointCalibration.startedAt;
+    const elapsedMs = startedAt > 0 ? Math.max(0, Date.now() - startedAt) : 0;
+    const remainingMs = startedAt > 0
+      ? Math.max(0, this.twoPointCalibrationTimeoutMs - elapsedMs)
+      : this.twoPointCalibrationTimeoutMs;
+    return {
+      step,
+      hasFirstPoint: Boolean(this.twoPointCalibration.firstPoint),
+      elapsedMs,
+      remainingMs,
+      timeoutMs: this.twoPointCalibrationTimeoutMs
+    };
   }
 
   setFilterParams({ emaAlpha, kalmanQ, kalmanR, staticVarianceThreshold, staticDurationFrames, averagingSampleCount }) {
@@ -229,5 +375,22 @@ export class TableLevelSensor {
 
   _resetStaticBuffers() {
     resetStaticBuffer(this);
+  }
+
+  _isTwoPointCalibrationExpired() {
+    const startedAt = this.twoPointCalibration.startedAt;
+    if (startedAt <= 0) return false;
+    return Date.now() - startedAt > this.twoPointCalibrationTimeoutMs;
+  }
+
+  _canCaptureCalibrationPoint() {
+    return this.sampleCount > 0 && Number.isFinite(this.pitch) && Number.isFinite(this.roll);
+  }
+
+  _storageErrorReason(error) {
+    if (error && error.name === 'QuotaExceededError') {
+      return 'quota_exceeded';
+    }
+    return 'storage_unavailable';
   }
 }
