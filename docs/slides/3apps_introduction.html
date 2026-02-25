@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生成AI × 現場アプリ ── 3つのモックアップ紹介</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans JP', sans-serif;
+            background-color: #e8e8e8;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        @media print {
+            body {
+                background: transparent;
+            }
+
+            .a4-landscape {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+
+        .a4-landscape {
+            width: 297mm;
+            height: 210mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 10mm 12mm 8mm 12mm;
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 3px solid #111;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        .header .sub {
+            font-size: 12px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .header .date {
+            font-size: 10px;
+            font-weight: 700;
+            border: 1.5px solid #333;
+            padding: 2px 8px;
+            white-space: nowrap;
+        }
+
+        /* ===== Purpose Section ===== */
+        .purpose-section {
+            border: 2px solid #111;
+            padding: 8px 14px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .purpose-label {
+            font-size: 13px;
+            font-weight: 700;
+            writing-mode: vertical-rl;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+            color: #fff;
+            padding: 4px 6px;
+            margin: -8px -0px -8px -14px;
+            letter-spacing: 0.15em;
+            min-width: 32px;
+        }
+
+        .purpose-items {
+            display: flex;
+            gap: 16px;
+            flex: 1;
+            padding: 2px 0;
+        }
+
+        .purpose-item {
+            flex: 1;
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+        }
+
+        .purpose-num {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .purpose-item p {
+            font-size: 11.5px;
+            line-height: 1.5;
+        }
+
+        .purpose-item strong {
+            font-weight: 700;
+        }
+
+        .purpose-divider {
+            width: 1px;
+            background: #ccc;
+            flex-shrink: 0;
+        }
+
+        /* ===== Apps Grid ===== */
+        .apps-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            flex: 1;
+            margin-bottom: 8px;
+        }
+
+        .app-card {
+            border: 1.5px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-header {
+            background: #111;
+            color: #fff;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-num {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .app-header-text h3 {
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .app-header-text .app-cat {
+            font-size: 9px;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            opacity: 0.75;
+        }
+
+        .app-body {
+            padding: 8px 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .app-what {
+            font-size: 11.5px;
+            line-height: 1.55;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .app-features {
+            list-style: none;
+            padding: 0;
+        }
+
+        .app-features li {
+            font-size: 11px;
+            line-height: 1.5;
+            padding: 1.5px 0;
+            padding-left: 14px;
+            position: relative;
+        }
+
+        .app-features li::before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            font-size: 10px;
+            color: #555;
+        }
+
+        .app-tech {
+            margin-top: auto;
+            padding-top: 4px;
+            border-top: 1px dashed #bbb;
+        }
+
+        .app-tech-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #666;
+            margin-bottom: 2px;
+        }
+
+        .app-tech-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+
+        .app-tech-tags span {
+            font-size: 9px;
+            font-weight: 600;
+            border: 1px solid #888;
+            padding: 1px 5px;
+            line-height: 1.4;
+        }
+
+        /* ===== Context Section ===== */
+        .context-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .context-box {
+            border: 1.5px solid #555;
+            padding: 6px 9px;
+        }
+
+        .context-box h4 {
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 2px;
+        }
+
+        .context-box p,
+        .context-box li {
+            font-size: 10.5px;
+            line-height: 1.5;
+            color: #333;
+        }
+
+        .context-box ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .context-box ul li {
+            padding-left: 12px;
+            position: relative;
+        }
+
+        .context-box ul li::before {
+            content: "・";
+            position: absolute;
+            left: 0;
+        }
+
+        /* ===== Footer ===== */
+        .footer {
+            border-top: 2px solid #111;
+            padding-top: 4px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 8.5px;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="a4-landscape">
+
+        <!-- ===== Header ===== -->
+        <div class="header">
+            <div>
+                <h1>生成AI × 現場アプリ ── 3つのモックアップ紹介</h1>
+                <p class="sub">生成AI技術の可能性を示すプロトタイプ集</p>
+            </div>
+            <span class="date code-font">2026.02 社内向け</span>
+        </div>
+
+        <!-- ===== Purpose Section (統合) ===== -->
+        <div class="purpose-section">
+            <div class="purpose-label">紹介の目的</div>
+            <div class="purpose-items">
+                <div class="purpose-item">
+                    <span class="purpose-num">①</span>
+                    <p><strong>アイデアを膨らませる。</strong>簡易モックアップを出発点に、「こうしたら面白い」「こっちにも使える」を自由に発想したい。</p>
+                </div>
+                <div class="purpose-divider"></div>
+                <div class="purpose-item">
+                    <span class="purpose-num">②</span>
+                    <p><strong>生成AIの実力を把握する。</strong>音声認識・対話AI・構造化抽出など、既に実用水準。1回あたり約0.1円の低コストで動く実例として紹介。</p>
+                </div>
+                <div class="purpose-divider"></div>
+                <div class="purpose-item">
+                    <span class="purpose-num">③</span>
+                    <p><strong>依頼研究・外注の構想材料に。</strong>「ここまでは個人で試作できた」を起点に、本格開発の依頼先選定や共同研究の検討を始めたい。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 3 Apps Grid ===== -->
+        <div class="apps-grid">
+
+            <!-- APP 1 -->
+            <div class="app-card">
+                <div class="app-header">
+                    <span class="app-num">01</span>
+                    <div class="app-header-text">
+                        <span class="app-cat">SENSOR × PWA</span>
+                        <h3>高精度傾斜角センサー</h3>
+                    </div>
+                </div>
+                <div class="app-body">
+                    <p class="app-what">
+                        スマホ内蔵の加速度センサーを<strong>カルマンフィルタ</strong>で高精度化。分解能<strong>0.01°</strong>でリアルタイム計測。<strong>音声フィードバック</strong>でハンズフリー計測が可能。
+                    </p>
+                    <ul class="app-features">
+                        <li>3段フィルタ連鎖（Kalman → EMA → Deadzone）</li>
+                        <li>傾き方向を音の高さ・パターンで通知</li>
+                        <li>PWA＝インストール不要、完全オフライン動作</li>
+                    </ul>
+                    <div class="app-tech">
+                        <p class="app-tech-label">使用技術</p>
+                        <div class="app-tech-tags">
+                            <span>DeviceOrientation</span>
+                            <span>Kalman Filter</span>
+                            <span>Web Audio</span>
+                            <span>PWA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APP 2 -->
+            <div class="app-card">
+                <div class="app-header">
+                    <span class="app-num">02</span>
+                    <div class="app-header-text">
+                        <span class="app-cat">SENSOR × GUIDE</span>
+                        <h3>机の水平ガイド</h3>
+                    </div>
+                </div>
+                <div class="app-body">
+                    <p class="app-what">
+                        机の傾きを計測し、4隅の<strong>ボルト回転量をmm→回転数で自動算出</strong>。<strong>音声ガイド</strong>で読み上げ、ボルトを回しながら耳で確認できる。
+                    </p>
+                    <ul class="app-features">
+                        <li>三角関数で各脚の高さ差→回転量変換</li>
+                        <li>静止判定→自動確定（ボタン操作不要）</li>
+                        <li>日本語/英語 自動切替・完全オフライン</li>
+                    </ul>
+                    <div class="app-tech">
+                        <p class="app-tech-label">使用技術</p>
+                        <div class="app-tech-tags">
+                            <span>DeviceOrientation</span>
+                            <span>SpeechSynthesis</span>
+                            <span>Kalman Filter</span>
+                            <span>PWA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APP 3 -->
+            <div class="app-card">
+                <div class="app-header">
+                    <span class="app-num">03</span>
+                    <div class="app-header-text">
+                        <span class="app-cat">AI × VOICE</span>
+                        <h3>Voice KY Assistant</h3>
+                    </div>
+                </div>
+                <div class="app-body">
+                    <p class="app-what">
+                        AIが<strong>ファシリテーター</strong>として危険予知（KY）活動を支援。<strong>音声対話</strong>で深掘り質問→構造化→<strong>KYシートPDFを自動生成</strong>。一人KYの形骸化を防止。
+                    </p>
+                    <ul class="app-features">
+                        <li>AIが深掘り質問 → 新たな視点をサジェスト</li>
+                        <li>音声入力でハンズフリー記録（手袋OK）</li>
+                        <li>監査対応PDF即時出力（二度書き排除）</li>
+                    </ul>
+                    <div class="app-tech">
+                        <p class="app-tech-label">使用技術</p>
+                        <div class="app-tech-tags">
+                            <span>Gemini 2.5</span>
+                            <span>Web Speech</span>
+                            <span>React 19</span>
+                            <span>Cloudflare Workers</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Context / Supplementary Info ===== -->
+        <div class="context-section">
+            <div class="context-box">
+                <h4>▍ これらの試作で分かったこと</h4>
+                <ul>
+                    <li>スマホ標準機能だけで専用計測器に近い精度を実現可能</li>
+                    <li>AI対話コスト：1回KYあたり<strong>約0.1円</strong>（Gemini利用時）</li>
+                    <li>音声UI＋PWAの組合せで「現場で使える」レベルに到達</li>
+                </ul>
+            </div>
+            <div class="context-box">
+                <h4>▍ 開発体制・期間</h4>
+                <ul>
+                    <li>開発者1名＋生成AIコーディングアシスタント</li>
+                    <li>各アプリ約1〜3週間で試作完了</li>
+                    <li>全てWebブラウザで動作、専用サーバー不要（03除く）</li>
+                </ul>
+            </div>
+            <div class="context-box">
+                <h4>▍ 今後のステップ案</h4>
+                <ul>
+                    <li>現場ニーズの深掘り → 優先テーマの選定</li>
+                    <li>外部パートナーとの共同開発・PoC実証</li>
+                    <li>社内展開に向けたセキュリティ・運用設計</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ===== Footer ===== -->
+        <div class="footer">
+            <span>※ いずれもプロトタイプ段階です。品質保証されたプロダクトではありません。</span>
+            <span class="code-font">生成AI × 現場アプリ // 3 Apps Introduction // CONFIDENTIAL</span>
+        </div>
+    </div>
+</body>
+
+</html>
