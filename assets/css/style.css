@@ -238,6 +238,7 @@ body {
   font-family: var(--font-ui);
   font-size: 0.85rem;
   color: var(--text-secondary);
+  text-decoration: none;
   background: var(--bg-glass);
   cursor: pointer;
 }
