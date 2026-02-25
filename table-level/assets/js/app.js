@@ -14,13 +14,14 @@ const MIN_SAMPLES_TO_FINALIZE = 10;
 const ACTIVE_LOOP_INTERVAL_MS = 1000 / 30;
 const IDLE_LOOP_INTERVAL_MS = 120;
 const SENSOR_SIGNAL_TIMEOUT_MS = 2500;
+const ADJUSTMENT_UPDATE_INTERVAL_MS = 10000;
 const MODE_LABEL = {
   active: '計測中',
   locking: '安定化中',
   measuring: '確定値'
 };
 const CALIBRATION_STEP_TEXT = {
-  idle: '校正待機中',
+  idle: '',
   awaiting_first: '2点校正: 1点目を記録してください',
   awaiting_second: '2点校正: 端末を180度回転して2点目を記録してください',
   completed: '2点校正が完了しました'
@@ -68,6 +69,8 @@ class TableLevelApp {
     this._lastSensorEventAt = 0;
     this._sensorSignalWarningShown = false;
     this._sensorSignalTimeoutMs = SENSOR_SIGNAL_TIMEOUT_MS;
+    this._adjustmentUpdateIntervalMs = ADJUSTMENT_UPDATE_INTERVAL_MS;
+    this._lastAdjustmentUpdateAt = 0;
     this._lastStatusCode = 'INIT';
     this._sessionId = createSessionId();
     this._orientationHandler = (event) => this._onOrientation(event);
@@ -289,6 +292,7 @@ class TableLevelApp {
     this.levelAnnounced = false;
     this.currentResult = null;
     this.measurementStartedAt = Date.now();
+    this._lastAdjustmentUpdateAt = 0;
 
     this.sensor.resetMeasurementState();
     this._toggleManualConfirm(false);
@@ -441,8 +445,8 @@ class TableLevelApp {
     const { pitchDeg, rollDeg } = this.sensor.getDeskAngles();
     const info = this.sensor.getMeasurementInfo();
 
-    this.els.pitchValue.textContent = `${pitchDeg.toFixed(3)}°`;
-    this.els.rollValue.textContent = `${rollDeg.toFixed(3)}°`;
+    this.els.pitchValue.textContent = `${pitchDeg.toFixed(2)}°`;
+    this.els.rollValue.textContent = `${rollDeg.toFixed(2)}°`;
     if (this.els.measurementMode) {
       this.els.measurementMode.textContent = MODE_LABEL[info.mode] ?? MODE_LABEL.active;
     }
@@ -456,6 +460,21 @@ class TableLevelApp {
   _updateMeasurementFlow() {
     if (!this.isMeasuring || !this.permissionGranted) return;
     if (!this.isPortrait) return;
+
+    if (this.resultReady) {
+      this._refreshAdjustmentIfDue();
+      const { pitchDeg, rollDeg } = this.sensor.getDeskAngles();
+      if (isLevel(pitchDeg, rollDeg, this.settings.levelThreshold)) {
+        this.els.levelBanner.classList.add('visible');
+        if (!this.levelAnnounced && this.settings.voiceEnabled) {
+          this.voice.speakLevelAchieved({ language: this.settings.language, volume: this.settings.volume });
+        }
+        this.levelAnnounced = true;
+        this._setStatus('active', '水平達成。作業完了です。');
+        this._setStatusCode('LEVEL_ACHIEVED');
+      }
+      return;
+    }
 
     const mode = this.sensor.getMeasurementMode();
     if (!this.resultReady && mode === 'measuring') {
@@ -479,16 +498,6 @@ class TableLevelApp {
       return;
     }
 
-    const { pitchDeg, rollDeg } = this.sensor.getDeskAngles();
-    if (isLevel(pitchDeg, rollDeg, this.settings.levelThreshold)) {
-      this.els.levelBanner.classList.add('visible');
-      if (!this.levelAnnounced && this.settings.voiceEnabled) {
-        this.voice.speakLevelAchieved({ language: this.settings.language, volume: this.settings.volume });
-      }
-      this.levelAnnounced = true;
-      this._setStatus('active', '水平達成。作業完了です。');
-      this._setStatusCode('LEVEL_ACHIEVED');
-    }
   }
 
   _finalizeMeasurement(forced) {
@@ -510,19 +519,11 @@ class TableLevelApp {
       return;
     }
 
-    const result = calcAdjustmentInstructions({
-      pitchDeg,
-      rollDeg,
-      widthMm: this.settings.tableWidth,
-      depthMm: this.settings.tableDepth,
-      boltPitchMmPerRev: this._currentBoltPitch(),
-      mode: this.settings.adjustMode,
-      minTurnsToShow: this.settings.minTurnsToShow,
-      maxTurnsWarning: this.settings.maxTurnsWarning
-    });
+    const result = this._buildAdjustmentResult(pitchDeg, rollDeg);
 
     this.currentResult = result;
     this.resultReady = true;
+    this._lastAdjustmentUpdateAt = Date.now();
     this._toggleManualConfirm(false);
     this._renderInstructions(result.instructions);
     this._renderLegCards(result.instructions);
@@ -543,6 +544,36 @@ class TableLevelApp {
         volume: this.settings.volume
       });
     }
+  }
+
+  _buildAdjustmentResult(pitchDeg, rollDeg) {
+    return calcAdjustmentInstructions({
+      pitchDeg,
+      rollDeg,
+      widthMm: this.settings.tableWidth,
+      depthMm: this.settings.tableDepth,
+      boltPitchMmPerRev: this._currentBoltPitch(),
+      mode: this.settings.adjustMode,
+      minTurnsToShow: this.settings.minTurnsToShow,
+      maxTurnsWarning: this.settings.maxTurnsWarning
+    });
+  }
+
+  _refreshAdjustmentIfDue() {
+    if (!this.resultReady) return;
+    const now = Date.now();
+    if (now - this._lastAdjustmentUpdateAt < this._adjustmentUpdateIntervalMs) return;
+
+    const { pitchDeg, rollDeg } = this.sensor.getDeskAngles();
+    if (!Number.isFinite(pitchDeg) || !Number.isFinite(rollDeg)) return;
+    const result = this._buildAdjustmentResult(pitchDeg, rollDeg);
+    this.currentResult = result;
+    this._lastAdjustmentUpdateAt = now;
+    this._renderInstructions(result.instructions);
+    this._renderLegCards(result.instructions);
+    this.els.warningBox.textContent = result.hasWarning
+      ? '注意: 推奨回転数が上限を超える足があります。構造を確認してください。'
+      : '';
   }
 
   _renderEmptyInstructions() {
