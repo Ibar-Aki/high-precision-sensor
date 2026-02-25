@@ -37,24 +37,28 @@ body {
 
 .header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   padding: 16px;
 }
 
 .app-title {
   margin: 0;
   white-space: nowrap;
-  font-size: clamp(1.8rem, 8vw, 2.4rem);
+  font-size: clamp(1.6rem, 7vw, 2.2rem);
   letter-spacing: 0.01em;
 }
 
 .status {
-  display: none;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  font-size: 13px;
+  display: block;
+  width: 100%;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .status[data-status='active'] {
@@ -174,14 +178,20 @@ body {
 .form-grid .check {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   white-space: nowrap;
+  justify-content: flex-start;
 }
 
 .form-grid .check input {
   width: auto;
   margin: 0;
   flex: 0 0 auto;
+}
+
+.form-grid .check .check-label {
+  display: inline-block;
+  line-height: 1.2;
 }
 
 .calibration-note {
