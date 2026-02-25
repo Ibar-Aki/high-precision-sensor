@@ -194,7 +194,8 @@ class App {
     if (!settingsResult.ok) {
       this._showStorageErrorToast('設定の読み込み', settingsResult.reason);
     }
-    if (migration.changed) {
+    const canPersistMigration = settingsResult.ok || settingsResult.reason === 'invalid_settings';
+    if (migration.changed && canPersistMigration) {
       const migrationSaveResult = this.settingsManager.save(this.settings);
       if (!migrationSaveResult.ok) {
         this._showStorageErrorToast('設定マイグレーション', migrationSaveResult.reason);

@@ -85,6 +85,21 @@ describe('SettingsManager', () => {
         });
     });
 
+    it('settingsVersion を数値として正規化すること', () => {
+        const manager = new SettingsManager();
+        global.localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+            settingsVersion: '120',
+            decimalPlaces: 2
+        }));
+
+        const result = manager.load();
+        expect(result.ok).toBe(true);
+        expect(result.value).toEqual({
+            settingsVersion: 99,
+            decimalPlaces: 2
+        });
+    });
+
     it('QuotaExceededError時に理由コードを返すこと', () => {
         const manager = new SettingsManager();
         const quotaError = new Error('quota');

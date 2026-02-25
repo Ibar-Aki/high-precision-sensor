@@ -677,6 +677,7 @@ class TableLevelApp {
       return;
     }
     this._setCalibrationStepUi('idle');
+    this._setStatus('active', '1点校正を適用しました。');
     this._setStatusCode('CAL1P_DONE');
   }
 

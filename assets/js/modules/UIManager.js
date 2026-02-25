@@ -28,7 +28,7 @@ export class UIManager {
             statusCode: document.getElementById('status-code'),
         };
 
-        this.decimalPlaces = 3;
+        this.decimalPlaces = 2;
         this.levelSensitivity = 10; // °
         this._lastPitchBarWidth = '';
         this._lastRollBarWidth = '';
