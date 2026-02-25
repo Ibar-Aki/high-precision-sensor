@@ -1,6 +1,17 @@
 const SETTINGS_KEY = 'tableLevelGuide_v1_1';
+const SETTINGS_VERSION = 2;
+const MIGRATION_FILTER_DEFAULTS = Object.freeze({
+  filterAlpha: 0.06,
+  kalmanQ: 0.0005,
+  kalmanR: 0.18,
+  staticVarianceThreshold: 0.004,
+  staticDurationFrames: 16,
+  averagingSampleCount: 24,
+  measurementTimeoutSec: 20
+});
 
 export const DEFAULT_SETTINGS = Object.freeze({
+  settingsVersion: SETTINGS_VERSION,
   tableWidth: 800,
   tableDepth: 1200,
   boltType: 'M8',
@@ -13,13 +24,13 @@ export const DEFAULT_SETTINGS = Object.freeze({
   language: 'ja',
   voiceEnabled: true,
   volume: 0.8,
-  filterAlpha: 0.08,
-  kalmanQ: 0.001,
-  kalmanR: 0.1,
-  staticVarianceThreshold: 0.002,
-  staticDurationFrames: 30,
-  averagingSampleCount: 40,
-  measurementTimeoutSec: 30,
+  filterAlpha: 0.06,
+  kalmanQ: 0.0005,
+  kalmanR: 0.18,
+  staticVarianceThreshold: 0.004,
+  staticDurationFrames: 16,
+  averagingSampleCount: 24,
+  measurementTimeoutSec: 20,
   maxTurnsWarning: 5,
   minTurnsToShow: 0.25
 });
@@ -39,26 +50,26 @@ export class TableLevelSettingsManager {
     try {
       raw = localStorage.getItem(SETTINGS_KEY);
     } catch (error) {
-      return { ok: false, reason: this._storageErrorReason(error), value: { ...DEFAULT_SETTINGS } };
+      return { ok: false, reason: this._storageErrorReason(error), value: { ...DEFAULT_SETTINGS }, migrated: false };
     }
 
     if (!raw) {
-      return { ok: true, value: { ...DEFAULT_SETTINGS } };
+      return { ok: true, value: { ...DEFAULT_SETTINGS }, migrated: false };
     }
 
     let parsed = null;
     try {
       parsed = JSON.parse(raw);
     } catch {
-      return { ok: false, reason: 'invalid_settings', value: { ...DEFAULT_SETTINGS } };
+      return { ok: false, reason: 'invalid_settings', value: { ...DEFAULT_SETTINGS }, migrated: false };
     }
 
-    const sanitized = this._sanitize(parsed);
-    return { ok: true, value: sanitized };
+    const sanitized = this._sanitize(parsed, { applyMigration: true, withMeta: true });
+    return { ok: true, value: sanitized.settings, migrated: sanitized.migrated };
   }
 
   save(settings) {
-    const sanitized = this._sanitize(settings ?? {});
+    const sanitized = this._sanitize(settings ?? {}, { applyMigration: false });
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(sanitized));
       return { ok: true };
@@ -74,15 +85,27 @@ export class TableLevelSettingsManager {
     return 'storage_unavailable';
   }
 
-  _sanitize(raw) {
-    const merged = { ...DEFAULT_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
+  _sanitize(raw, options = {}) {
+    const applyMigration = options.applyMigration !== false;
+    const withMeta = options.withMeta === true;
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const rawVersion = Math.round(clamp(toNumber(source.settingsVersion) ?? 0, 0, 99));
+    const merged = { ...DEFAULT_SETTINGS, ...source };
+    const migrated = applyMigration && rawVersion < SETTINGS_VERSION;
+    if (migrated) {
+      for (const [key, value] of Object.entries(MIGRATION_FILTER_DEFAULTS)) {
+        merged[key] = value;
+      }
+    }
+    merged.settingsVersion = SETTINGS_VERSION;
 
     const boltTypes = ['M6', 'M8', 'M10', 'M12', 'custom'];
     const languages = ['ja', 'en'];
     const pitchAxis = ['depth', 'width'];
     const adjustModes = ['bidirectional', 'cw_only'];
 
-    return {
+    const settings = {
+      settingsVersion: SETTINGS_VERSION,
       tableWidth: clamp(toNumber(merged.tableWidth) ?? DEFAULT_SETTINGS.tableWidth, 300, 3000),
       tableDepth: clamp(toNumber(merged.tableDepth) ?? DEFAULT_SETTINGS.tableDepth, 300, 3000),
       boltType: boltTypes.includes(merged.boltType) ? merged.boltType : DEFAULT_SETTINGS.boltType,
@@ -123,6 +146,10 @@ export class TableLevelSettingsManager {
       maxTurnsWarning: clamp(toNumber(merged.maxTurnsWarning) ?? DEFAULT_SETTINGS.maxTurnsWarning, 1, 20),
       minTurnsToShow: clamp(toNumber(merged.minTurnsToShow) ?? DEFAULT_SETTINGS.minTurnsToShow, 0, 1)
     };
+    if (withMeta) {
+      return { settings, migrated };
+    }
+    return settings;
   }
 }
 

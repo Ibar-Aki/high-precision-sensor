@@ -47,7 +47,7 @@ class TableLevelApp {
   constructor() {
     this.settingsManager = new TableLevelSettingsManager();
     const loaded = this.settingsManager.load();
-    this.settings = loaded.value;
+    this.settings = loaded.value ?? { ...DEFAULT_SETTINGS };
 
     this.sensor = new TableLevelSensor(this._buildSensorOptions(this.settings));
     this.voice = new VoiceGuide();
@@ -96,6 +96,13 @@ class TableLevelApp {
     this._setSessionInfo(this._sessionId);
     this._setStatusCode('INIT');
 
+    if (loaded.migrated) {
+      const migrationSaveResult = this.settingsManager.save(this.settings);
+      if (!migrationSaveResult.ok) {
+        this._setStatus('warning', '設定マイグレーションの保存に失敗しました。');
+      }
+    }
+
     if (!loaded.ok) {
       this._setStatus('warning', '設定の読み込みに失敗したため既定値を使用します。');
     }
@@ -112,10 +119,11 @@ class TableLevelApp {
       app: byId('app-screen'),
       orientationOverlay: byId('orientation-overlay'),
       statusText: byId('status-text'),
-      pitchValue: byId('pitch-value'),
-      rollValue: byId('roll-value'),
+      pitchLiveValue: byId('pitch-live-value'),
+      pitchFinalValue: byId('pitch-final-value'),
+      rollLiveValue: byId('roll-live-value'),
+      rollFinalValue: byId('roll-final-value'),
       measurementMode: byId('measurement-mode'),
-      stabilityValue: byId('stability-value'),
       levelBanner: byId('level-banner'),
       warningBox: byId('warning-box'),
       instructionList: byId('instruction-list'),
@@ -442,18 +450,20 @@ class TableLevelApp {
   }
 
   _renderTelemetry() {
-    const { pitchDeg, rollDeg } = this.sensor.getDeskAngles();
+    const live = this.sensor.getDeskAngles('live');
+    const final = this.sensor.getDeskAngles('final');
     const info = this.sensor.getMeasurementInfo();
 
-    this.els.pitchValue.textContent = `${pitchDeg.toFixed(2)}°`;
-    this.els.rollValue.textContent = `${rollDeg.toFixed(2)}°`;
+    this.els.pitchLiveValue.textContent = Number.isFinite(live.pitchDeg) ? `${live.pitchDeg.toFixed(2)}°` : '--';
+    this.els.rollLiveValue.textContent = Number.isFinite(live.rollDeg) ? `${live.rollDeg.toFixed(2)}°` : '--';
+    this.els.pitchFinalValue.textContent = info.hasFinalMeasurement && Number.isFinite(final.pitchDeg)
+      ? `${final.pitchDeg.toFixed(2)}°`
+      : '--';
+    this.els.rollFinalValue.textContent = info.hasFinalMeasurement && Number.isFinite(final.rollDeg)
+      ? `${final.rollDeg.toFixed(2)}°`
+      : '--';
     if (this.els.measurementMode) {
       this.els.measurementMode.textContent = MODE_LABEL[info.mode] ?? MODE_LABEL.active;
-    }
-
-    const stability = Math.min(1, info.staticSamples / Math.max(1, this.settings.averagingSampleCount));
-    if (this.els.stabilityValue) {
-      this.els.stabilityValue.textContent = `${Math.round(stability * 100)}%`;
     }
   }
 
@@ -667,7 +677,6 @@ class TableLevelApp {
       return;
     }
     this._setCalibrationStepUi('idle');
-    this._setStatus('active', '1点校正を適用しました。');
     this._setStatusCode('CAL1P_DONE');
   }
 

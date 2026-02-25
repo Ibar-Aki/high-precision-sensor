@@ -166,9 +166,17 @@
             <span class="angle-label">ピッチ（前後）</span>
             <span id="pitch-direction" class="direction-indicator">―</span>
           </div>
-          <div class="angle-value-container">
-            <span id="pitch-value" class="angle-value">0.000</span>
-            <span class="angle-unit">°</span>
+          <div class="angle-value-stack">
+            <div class="angle-value-container">
+              <span class="angle-sub-label">LIVE</span>
+              <span id="pitch-live-value" class="angle-value">0.00</span>
+              <span class="angle-unit">°</span>
+            </div>
+            <div class="angle-value-container">
+              <span class="angle-sub-label">確定</span>
+              <span id="pitch-final-value" class="angle-value angle-value-final">--</span>
+              <span class="angle-unit">°</span>
+            </div>
           </div>
           <div class="angle-bar-container">
             <div id="pitch-bar" class="angle-bar pitch-bar"></div>
@@ -179,9 +187,17 @@
             <span class="angle-label">ロール（左右）</span>
             <span id="roll-direction" class="direction-indicator">―</span>
           </div>
-          <div class="angle-value-container">
-            <span id="roll-value" class="angle-value">0.000</span>
-            <span class="angle-unit">°</span>
+          <div class="angle-value-stack">
+            <div class="angle-value-container">
+              <span class="angle-sub-label">LIVE</span>
+              <span id="roll-live-value" class="angle-value">0.00</span>
+              <span class="angle-unit">°</span>
+            </div>
+            <div class="angle-value-container">
+              <span class="angle-sub-label">確定</span>
+              <span id="roll-final-value" class="angle-value angle-value-final">--</span>
+              <span class="angle-unit">°</span>
+            </div>
           </div>
           <div class="angle-bar-container">
             <div id="roll-bar" class="angle-bar roll-bar"></div>
@@ -192,9 +208,17 @@
       <!-- 合成角度 -->
       <div class="total-angle glass-card">
         <span class="total-label">合成傾斜角</span>
-        <div class="total-value-container">
-          <span id="total-value" class="total-value">0.000</span>
-          <span class="total-unit">°</span>
+        <div class="total-value-stack">
+          <div class="total-value-container">
+            <span class="angle-sub-label">LIVE</span>
+            <span id="total-live-value" class="total-value">0.00</span>
+            <span class="total-unit">°</span>
+          </div>
+          <div class="total-value-container">
+            <span class="angle-sub-label">確定</span>
+            <span id="total-final-value" class="total-value total-value-final">--</span>
+            <span class="total-unit">°</span>
+          </div>
         </div>
       </div>
 
@@ -281,24 +305,24 @@
             <div class="setting-item">
               <label for="filter-alpha">EMA平滑化係数（α）</label>
               <div class="slider-row">
-                <input type="range" id="filter-alpha" min="0.01" max="0.5" step="0.01" value="0.08" class="slider">
-                <span id="filter-alpha-val" class="slider-val">0.08</span>
+                <input type="range" id="filter-alpha" min="0.01" max="0.5" step="0.01" value="0.06" class="slider">
+                <span id="filter-alpha-val" class="slider-val">0.06</span>
               </div>
               <p class="setting-hint">小さいほど安定（遅延増）、大きいほど追従（ノイズ増）</p>
             </div>
             <div class="setting-item">
               <label for="kalman-q">カルマンフィルタ プロセスノイズ（Q）</label>
               <div class="slider-row">
-                <input type="range" id="kalman-q" min="0.0001" max="0.1" step="0.0001" value="0.001" class="slider">
-                <span id="kalman-q-val" class="slider-val">0.001</span>
+                <input type="range" id="kalman-q" min="0.0001" max="0.1" step="0.0001" value="0.0005" class="slider">
+                <span id="kalman-q-val" class="slider-val">0.0005</span>
               </div>
               <p class="setting-hint">小さいほど安定、大きいほど追従</p>
             </div>
             <div class="setting-item">
               <label for="kalman-r">カルマンフィルタ 観測ノイズ（R）</label>
               <div class="slider-row">
-                <input type="range" id="kalman-r" min="0.01" max="1.0" step="0.01" value="0.1" class="slider">
-                <span id="kalman-r-val" class="slider-val">0.10</span>
+                <input type="range" id="kalman-r" min="0.01" max="1.0" step="0.01" value="0.18" class="slider">
+                <span id="kalman-r-val" class="slider-val">0.18</span>
               </div>
             </div>
             <div class="setting-item">
@@ -311,25 +335,25 @@
             <div class="setting-item">
               <label for="static-variance-threshold">静止判定閾値（分散）</label>
               <div class="slider-row">
-                <input type="range" id="static-variance-threshold" min="0.0001" max="0.02" step="0.0001" value="0.002"
+                <input type="range" id="static-variance-threshold" min="0.0001" max="0.02" step="0.0001" value="0.004"
                   class="slider">
-                <span id="static-variance-threshold-val" class="slider-val">0.0020</span>
+                <span id="static-variance-threshold-val" class="slider-val">0.0040</span>
               </div>
               <p class="setting-hint">小さいほど厳密（誤ロック減）、大きいほどロックしやすい</p>
             </div>
             <div class="setting-item">
               <label for="static-duration-frame">静止判定フレーム数</label>
               <div class="slider-row">
-                <input type="range" id="static-duration-frame" min="10" max="120" step="1" value="30" class="slider">
-                <span id="static-duration-frame-val" class="slider-val">30</span>
+                <input type="range" id="static-duration-frame" min="10" max="120" step="1" value="18" class="slider">
+                <span id="static-duration-frame-val" class="slider-val">18</span>
               </div>
               <p class="setting-hint">値を上げるほど誤ロックは減るが、確定まで遅くなる</p>
             </div>
             <div class="setting-item">
               <label for="averaging-sample-count">静止平均サンプル数</label>
               <div class="slider-row">
-                <input type="range" id="averaging-sample-count" min="10" max="300" step="1" value="60" class="slider">
-                <span id="averaging-sample-count-val" class="slider-val">60</span>
+                <input type="range" id="averaging-sample-count" min="10" max="300" step="1" value="30" class="slider">
+                <span id="averaging-sample-count-val" class="slider-val">30</span>
               </div>
               <p class="setting-hint">値を上げるほど高精度だが、確定値到達が遅くなる</p>
             </div>
@@ -378,8 +402,8 @@
             <div class="setting-item">
               <label for="decimal-places">小数点以下桁数</label>
               <div class="slider-row">
-                <input type="range" id="decimal-places" min="1" max="4" step="1" value="3" class="slider">
-                <span id="decimal-places-val" class="slider-val">3</span>
+                <input type="range" id="decimal-places" min="1" max="4" step="1" value="2" class="slider">
+                <span id="decimal-places-val" class="slider-val">2</span>
               </div>
             </div>
             <div class="setting-item">

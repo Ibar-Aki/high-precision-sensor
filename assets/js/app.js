@@ -13,6 +13,16 @@ const MODE_LABEL = {
   locking: '安定化中',
   measuring: '確定値'
 };
+const SETTINGS_PROFILE_VERSION = 2;
+const SETTINGS_PROFILE_FILTER_DEFAULTS = Object.freeze({
+  emaAlpha: 0.06,
+  kalmanQ: 0.0005,
+  kalmanR: 0.18,
+  staticVarianceThreshold: 0.004,
+  staticDurationFrame: 18,
+  averagingSampleCount: 30,
+  decimalPlaces: 2
+});
 
 function createSessionId(prefix = 'HS') {
   const now = new Date();
@@ -23,6 +33,7 @@ function createSessionId(prefix = 'HS') {
 }
 
 const SETTINGS_SAVE_SCHEMA = [
+  { key: 'settingsVersion', read: () => SETTINGS_PROFILE_VERSION },
   { key: 'emaAlpha', read: (app) => app.sensor.emaAlpha },
   { key: 'kalmanQ', read: (app) => app.sensor.kfPitch.q },
   { key: 'kalmanR', read: (app) => app.sensor.kfPitch.r },
@@ -178,8 +189,16 @@ class App {
 
     const settingsResult = this.settingsManager.load();
     this.settings = settingsResult.value ?? {};
+    const migration = this._migrateSettingsToLatest(this.settings);
+    this.settings = migration.settings;
     if (!settingsResult.ok) {
       this._showStorageErrorToast('設定の読み込み', settingsResult.reason);
+    }
+    if (migration.changed) {
+      const migrationSaveResult = this.settingsManager.save(this.settings);
+      if (!migrationSaveResult.ok) {
+        this._showStorageErrorToast('設定マイグレーション', migrationSaveResult.reason);
+      }
     }
 
     window.addEventListener('app:toast', this._toastEventHandler);
@@ -348,20 +367,27 @@ class App {
         this._updateMeasurementStatus();
       }
 
-      const baseDp = Number.isFinite(this.ui.decimalPlaces) ? this.ui.decimalPlaces : 3;
-      const mode = this.sensor.getMeasurementMode?.() ?? 'active';
-      const displayDp = mode === 'measuring' ? Math.min(baseDp + 1, 6) : baseDp;
+      const displayDp = Number.isFinite(this.ui.decimalPlaces) ? this.ui.decimalPlaces : 2;
+      const live = this.sensor.getLiveAngles?.() ?? { pitch: this.sensor.pitch, roll: this.sensor.roll };
+      const final = this.sensor.getFinalAngles?.() ?? { available: false, pitch: null, roll: null };
+      const liveTotal = Math.sqrt(live.pitch * live.pitch + live.roll * live.roll);
+      const finalTotal = final.available
+        ? Math.sqrt(final.pitch * final.pitch + final.roll * final.roll)
+        : null;
 
       // 角度表示更新
-      this.ui.updateAngles(
-        this.sensor.pitch,
-        this.sensor.roll,
-        this.sensor.getTotalAngle(),
-        displayDp
-      );
+      this.ui.updateAngles({
+        livePitch: live.pitch,
+        liveRoll: live.roll,
+        liveTotal,
+        finalPitch: final.pitch,
+        finalRoll: final.roll,
+        finalTotal,
+        hasFinal: Boolean(final.available)
+      }, displayDp);
 
       // 音声更新
-      this.audio.update(this.sensor.pitch, this.sensor.roll);
+      this.audio.update(live.pitch, live.roll);
 
       // 統計は200ms毎
       if (timestamp - lastStatsUpdate > 200) {
@@ -539,6 +565,25 @@ class App {
 
   _refreshSoundSettingsVisibility() {
     refreshSoundSettingsVisibility(this.audio);
+  }
+
+  _migrateSettingsToLatest(loadedSettings) {
+    const source = (loadedSettings && typeof loadedSettings === 'object')
+      ? { ...loadedSettings }
+      : {};
+    const version = Number.isFinite(source.settingsVersion)
+      ? Math.max(0, Math.round(source.settingsVersion))
+      : 0;
+
+    if (version >= SETTINGS_PROFILE_VERSION) {
+      return { changed: false, settings: source };
+    }
+
+    for (const [key, value] of Object.entries(SETTINGS_PROFILE_FILTER_DEFAULTS)) {
+      source[key] = value;
+    }
+    source.settingsVersion = SETTINGS_PROFILE_VERSION;
+    return { changed: true, settings: source };
   }
 
   async _registerServiceWorker() {

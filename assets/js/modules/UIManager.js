@@ -6,9 +6,12 @@ export class UIManager {
     constructor() {
         // DOM参照
         this.els = {
-            pitchValue: document.getElementById('pitch-value'),
-            rollValue: document.getElementById('roll-value'),
-            totalValue: document.getElementById('total-value'),
+            pitchLiveValue: document.getElementById('pitch-live-value'),
+            pitchFinalValue: document.getElementById('pitch-final-value'),
+            rollLiveValue: document.getElementById('roll-live-value'),
+            rollFinalValue: document.getElementById('roll-final-value'),
+            totalLiveValue: document.getElementById('total-live-value'),
+            totalFinalValue: document.getElementById('total-final-value'),
             pitchDir: document.getElementById('pitch-direction'),
             rollDir: document.getElementById('roll-direction'),
             pitchBar: document.getElementById('pitch-bar'),
@@ -39,26 +42,41 @@ export class UIManager {
         this._statusTextEl = this.els.sensorStatus?.querySelector('.status-text') ?? null;
     }
 
-    updateAngles(pitch, roll, total, dpOverride = null) {
+    updateAngles({
+        livePitch,
+        liveRoll,
+        liveTotal,
+        finalPitch = null,
+        finalRoll = null,
+        finalTotal = null,
+        hasFinal = false
+    }, dpOverride = null) {
         const dp = dpOverride ?? this.decimalPlaces;
-        const absPitch = Math.abs(pitch);
-        const absRoll = Math.abs(roll);
+        const absPitch = Math.abs(livePitch);
+        const absRoll = Math.abs(liveRoll);
 
         // デジタル値
         const pitchText = absPitch.toFixed(dp);
         const rollText = absRoll.toFixed(dp);
-        const totalText = total.toFixed(dp);
-        if (this.els.pitchValue.textContent !== pitchText) this.els.pitchValue.textContent = pitchText;
-        if (this.els.rollValue.textContent !== rollText) this.els.rollValue.textContent = rollText;
-        if (this.els.totalValue.textContent !== totalText) this.els.totalValue.textContent = totalText;
+        const totalText = liveTotal.toFixed(dp);
+        if (this.els.pitchLiveValue.textContent !== pitchText) this.els.pitchLiveValue.textContent = pitchText;
+        if (this.els.rollLiveValue.textContent !== rollText) this.els.rollLiveValue.textContent = rollText;
+        if (this.els.totalLiveValue.textContent !== totalText) this.els.totalLiveValue.textContent = totalText;
+
+        const pitchFinalText = hasFinal && Number.isFinite(finalPitch) ? Math.abs(finalPitch).toFixed(dp) : '--';
+        const rollFinalText = hasFinal && Number.isFinite(finalRoll) ? Math.abs(finalRoll).toFixed(dp) : '--';
+        const totalFinalText = hasFinal && Number.isFinite(finalTotal) ? finalTotal.toFixed(dp) : '--';
+        if (this.els.pitchFinalValue.textContent !== pitchFinalText) this.els.pitchFinalValue.textContent = pitchFinalText;
+        if (this.els.rollFinalValue.textContent !== rollFinalText) this.els.rollFinalValue.textContent = rollFinalText;
+        if (this.els.totalFinalValue.textContent !== totalFinalText) this.els.totalFinalValue.textContent = totalFinalText;
 
         // 方向インジケーター
-        this._updateDirection(this.els.pitchDir, pitch, '前傾', '後傾', '水平');
-        this._updateDirection(this.els.rollDir, roll, '右傾', '左傾', '水平');
+        this._updateDirection(this.els.pitchDir, livePitch, '前傾', '後傾', '水平');
+        this._updateDirection(this.els.rollDir, liveRoll, '右傾', '左傾', '水平');
 
         // カラーリング
-        this._colorizeAngle(this.els.pitchValue, absPitch);
-        this._colorizeAngle(this.els.rollValue, absRoll);
+        this._colorizeAngle(this.els.pitchLiveValue, absPitch);
+        this._colorizeAngle(this.els.rollLiveValue, absRoll);
 
         // 角度バー
         const barScale = 10; // ±10°でフル
@@ -76,10 +94,10 @@ export class UIManager {
         }
 
         // SVG バブル
-        this._updateBubble(pitch, roll);
+        this._updateBubble(livePitch, liveRoll);
 
         // 弧
-        this._updateArcs(pitch, roll);
+        this._updateArcs(livePitch, liveRoll);
     }
 
     _updateDirection(el, value, posLabel, negLabel, zeroLabel) {

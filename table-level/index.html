@@ -49,11 +49,18 @@
       <div class="card telemetry-card">
         <h2>計測値</h2>
         <div class="telemetry-grid">
-          <div>ピッチ: <strong id="pitch-value">0.000°</strong></div>
-          <div>ロール: <strong id="roll-value">0.000°</strong></div>
-          <div class="aux-telemetry">モード: <strong id="measurement-mode">active</strong></div>
-          <div class="aux-telemetry">安定度: <strong id="stability-value">0%</strong></div>
+          <div class="telemetry-axis">
+            <div class="telemetry-axis-title">ピッチ</div>
+            <div class="telemetry-line"><span class="telemetry-label">LIVE</span><strong id="pitch-live-value">0.00°</strong></div>
+            <div class="telemetry-line"><span class="telemetry-label">確定</span><strong id="pitch-final-value">--</strong></div>
+          </div>
+          <div class="telemetry-axis">
+            <div class="telemetry-axis-title">ロール</div>
+            <div class="telemetry-line"><span class="telemetry-label">LIVE</span><strong id="roll-live-value">0.00°</strong></div>
+            <div class="telemetry-line"><span class="telemetry-label">確定</span><strong id="roll-final-value">--</strong></div>
+          </div>
         </div>
+        <div class="aux-telemetry">モード: <strong id="measurement-mode">計測中</strong></div>
 
         <div class="actions">
           <button id="start-measure-btn" class="btn primary">計測開始</button>
@@ -62,7 +69,7 @@
           <button id="calibrate-1pt-btn" class="btn">1点校正</button>
           <button id="calibrate-2pt-btn" class="btn">2点校正</button>
         </div>
-        <p id="calibration-step-text" class="note calibration-note">校正待機中</p>
+        <p id="calibration-step-text" class="note calibration-note"></p>
 
         <div id="level-banner" class="level-banner">水平達成</div>
         <div id="warning-box" class="warning-box"></div>

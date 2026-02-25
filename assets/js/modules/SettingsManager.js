@@ -50,6 +50,9 @@ export class SettingsManager {
 
         const sanitized = {};
 
+        const settingsVersion = this._sanitizeNumber(raw.settingsVersion, 0, 99, { integer: true });
+        if (settingsVersion !== undefined) sanitized.settingsVersion = settingsVersion;
+
         const emaAlpha = this._sanitizeNumber(raw.emaAlpha, 0.01, 0.5);
         if (emaAlpha !== undefined) sanitized.emaAlpha = emaAlpha;
 

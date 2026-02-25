@@ -192,7 +192,7 @@ async function run() {
       window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { beta: 0.6, gamma: 0.2 }));
     });
     await page.waitForTimeout(250);
-    const pitchBeforePagehide = await page.textContent('#pitch-value');
+    const pitchBeforePagehide = await page.textContent('#pitch-live-value');
     await page.evaluate(() => {
       window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
       for (let i = 0; i < 20; i++) {
@@ -200,7 +200,7 @@ async function run() {
       }
     });
     await page.waitForTimeout(350);
-    const pitchAfterPagehide = await page.textContent('#pitch-value');
+    const pitchAfterPagehide = await page.textContent('#pitch-live-value');
     assert(
       pitchBeforePagehide !== pitchAfterPagehide,
       `pagehide(persisted) 後に計測更新が停止しました: before=${pitchBeforePagehide}, after=${pitchAfterPagehide}`

@@ -17,11 +17,11 @@ import {
 export class SensorEngine {
     constructor() {
         // カルマンフィルタ（ピッチ / ロール各1D）
-        this.kfPitch = new KalmanFilter1D(0.001, 0.1);
-        this.kfRoll = new KalmanFilter1D(0.001, 0.1);
+        this.kfPitch = new KalmanFilter1D(0.0005, 0.18);
+        this.kfRoll = new KalmanFilter1D(0.0005, 0.18);
 
         // EMA (Exponential Moving Average)
-        this.emaAlpha = 0.08;
+        this.emaAlpha = 0.06;
         this.emaPitch = 0;
         this.emaRoll = 0;
         this.emaInitialized = false;
@@ -36,6 +36,11 @@ export class SensorEngine {
         // 出力値 (フィルタ済み)
         this.pitch = 0;
         this.roll = 0;
+        this.livePitch = 0;
+        this.liveRoll = 0;
+        this.finalPitch = NaN;
+        this.finalRoll = NaN;
+        this.hasFinalMeasurement = false;
 
         // 生データ (デバッグ用)
         this.rawPitch = 0;
@@ -54,9 +59,9 @@ export class SensorEngine {
         this.locked = false;
 
         // ハイブリッド静止平均パラメータ
-        this.staticVarianceThreshold = 0.002;
-        this.staticDurationFrame = 30;
-        this.averagingSampleCount = 60;
+        this.staticVarianceThreshold = 0.004;
+        this.staticDurationFrame = 18;
+        this.averagingSampleCount = 30;
         this.maxBufferSize = 2000;
 
         // ハイブリッド静止平均状態
@@ -151,7 +156,10 @@ export class SensorEngine {
         let kfP = this.kfPitch.update(correctedPitch);
         let kfR = this.kfRoll.update(correctedRoll);
 
-        // 3. 動き分散を監視し、ハイブリッドモードを切り替える
+        // 3. LIVE値は常にEMA + Deadzoneで更新する
+        this._updateLiveAngles(kfP, kfR);
+
+        // 4. 動き分散を監視し、ハイブリッドモードを切り替える
         this._updateMotionWindow(kfP, kfR);
         const staticDetected = this._isStaticDetected();
 
@@ -163,43 +171,26 @@ export class SensorEngine {
 
             // Static Mode: カルマン後値を積算平均
             this._pushStaticSample(kfP, kfR);
-            this.measurementMode = this.staticSampleCount >= this._toPositiveInt(this.averagingSampleCount, 60)
+            this.measurementMode = this.staticSampleCount >= this._toPositiveInt(this.averagingSampleCount, 30)
                 ? 'measuring'
                 : 'locking';
 
-            this.pitch = this.staticPitchSum / this.staticSampleCount;
-            this.roll = this.staticRollSum / this.staticSampleCount;
+            this.finalPitch = this.staticPitchSum / this.staticSampleCount;
+            this.finalRoll = this.staticRollSum / this.staticSampleCount;
+            this.hasFinalMeasurement = this.measurementMode === 'measuring';
+            this.pitch = this.finalPitch;
+            this.roll = this.finalRoll;
         } else {
             // Static -> Active へ戻る際は静止平均状態をクリア
             if (this.measurementMode !== 'active') {
                 this._resetStaticBuffer();
                 this.measurementMode = 'active';
             }
-
-            // Active Mode: 従来の EMA + Deadzone を維持
-            if (!this.emaInitialized) {
-                this.emaPitch = kfP;
-                this.emaRoll = kfR;
-                this.emaInitialized = true;
-            } else {
-                this.emaPitch = this.emaAlpha * kfP + (1 - this.emaAlpha) * this.emaPitch;
-                this.emaRoll = this.emaAlpha * kfR + (1 - this.emaAlpha) * this.emaRoll;
-            }
-
-            let newPitch = this.emaPitch;
-            let newRoll = this.emaRoll;
-
-            if (Math.abs(newPitch - this._prevPitch) < this.deadzone) {
-                newPitch = this._prevPitch;
-            }
-            if (Math.abs(newRoll - this._prevRoll) < this.deadzone) {
-                newRoll = this._prevRoll;
-            }
-
-            this._prevPitch = newPitch;
-            this._prevRoll = newRoll;
-            this.pitch = newPitch;
-            this.roll = newRoll;
+            this.finalPitch = NaN;
+            this.finalRoll = NaN;
+            this.hasFinalMeasurement = false;
+            this.pitch = this.livePitch;
+            this.roll = this.liveRoll;
         }
 
         // 統計更新
@@ -337,7 +328,30 @@ export class SensorEngine {
         return {
             mode: this.measurementMode,
             variance: this.measurementVariance,
-            staticSamples: this.staticSampleCount
+            staticSamples: this.staticSampleCount,
+            livePitch: this.livePitch,
+            liveRoll: this.liveRoll,
+            finalPitch: this.finalPitch,
+            finalRoll: this.finalRoll,
+            hasFinalMeasurement: this.hasFinalMeasurement
+        };
+    }
+
+    getLiveAngles() {
+        return {
+            pitch: this.livePitch,
+            roll: this.liveRoll
+        };
+    }
+
+    getFinalAngles() {
+        if (!this.hasFinalMeasurement || !Number.isFinite(this.finalPitch) || !Number.isFinite(this.finalRoll)) {
+            return { available: false, pitch: null, roll: null };
+        }
+        return {
+            available: true,
+            pitch: this.finalPitch,
+            roll: this.finalRoll
         };
     }
 
@@ -357,6 +371,11 @@ export class SensorEngine {
         this.emaInitialized = false;
         this.pitch = 0;
         this.roll = 0;
+        this.livePitch = 0;
+        this.liveRoll = 0;
+        this.finalPitch = NaN;
+        this.finalRoll = NaN;
+        this.hasFinalMeasurement = false;
         this._prevPitch = 0;
         this._prevRoll = 0;
         resetMotionWindow(this);
@@ -364,21 +383,47 @@ export class SensorEngine {
         this._resetStaticBuffer();
     }
 
+    _updateLiveAngles(kfPitch, kfRoll) {
+        if (!this.emaInitialized) {
+            this.emaPitch = kfPitch;
+            this.emaRoll = kfRoll;
+            this.emaInitialized = true;
+        } else {
+            this.emaPitch = this.emaAlpha * kfPitch + (1 - this.emaAlpha) * this.emaPitch;
+            this.emaRoll = this.emaAlpha * kfRoll + (1 - this.emaAlpha) * this.emaRoll;
+        }
+
+        let nextPitch = this.emaPitch;
+        let nextRoll = this.emaRoll;
+
+        if (Math.abs(nextPitch - this._prevPitch) < this.deadzone) {
+            nextPitch = this._prevPitch;
+        }
+        if (Math.abs(nextRoll - this._prevRoll) < this.deadzone) {
+            nextRoll = this._prevRoll;
+        }
+
+        this._prevPitch = nextPitch;
+        this._prevRoll = nextRoll;
+        this.livePitch = nextPitch;
+        this.liveRoll = nextRoll;
+    }
+
     _updateMotionWindow(kfPitch, kfRoll) {
-        const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 18);
         updateMotionWindow(this, kfPitch, kfRoll, windowSize);
     }
 
     _pushMotionMetric(metric) {
-        const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 18);
         pushMotionMetric(this, metric, windowSize);
     }
 
     _isStaticDetected() {
-        const windowSize = this._toPositiveInt(this.staticDurationFrame, 30);
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 18);
         const threshold = Number.isFinite(this.staticVarianceThreshold) && this.staticVarianceThreshold >= 0
             ? this.staticVarianceThreshold
-            : 0.002;
+            : 0.004;
         return isStaticDetected(this, windowSize, threshold);
     }
 

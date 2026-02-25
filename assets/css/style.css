@@ -538,12 +538,30 @@ body {
   gap: 0.15rem;
 }
 
+.angle-value-stack {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.angle-sub-label {
+  min-width: 2.4rem;
+  font-size: 0.62rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
 .angle-value {
   font-family: var(--font-mono);
   font-size: 1.6rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   transition: color 0.3s ease;
+}
+
+.angle-value-final {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
 }
 
 .angle-unit {
@@ -602,6 +620,11 @@ body {
   gap: 0.15rem;
 }
 
+.total-value-stack {
+  display: grid;
+  gap: 0.15rem;
+}
+
 .total-value {
   font-family: var(--font-mono);
   font-size: 1.2rem;
@@ -610,6 +633,13 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.total-value-final {
+  font-size: 0.95rem;
+  background: none;
+  -webkit-text-fill-color: var(--text-secondary);
+  color: var(--text-secondary);
 }
 
 .total-unit {
