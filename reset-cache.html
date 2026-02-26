@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>高精度傾斜角センサー 復旧ツール</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1220;
+      --panel: #121b2f;
+      --border: #2b3a5d;
+      --text: #e6edf9;
+      --muted: #9db0d0;
+      --ok: #38d39f;
+      --warn: #fbbf24;
+      --error: #fb7185;
+      --btn: #1d4ed8;
+      --btn-hover: #1e40af;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #132040 0%, var(--bg) 45%);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      width: min(720px, 100%);
+      background: color-mix(in srgb, var(--panel) 92%, black);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      box-sizing: border-box;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      line-height: 1.4;
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    ul {
+      margin: 8px 0 14px;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    button,
+    a {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button {
+      background: var(--btn);
+      color: white;
+    }
+
+    button:hover {
+      background: var(--btn-hover);
+    }
+
+    a {
+      border-color: var(--border);
+      color: var(--text);
+      background: transparent;
+    }
+
+    .log {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      background: #0a1020;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 88px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .error { color: var(--error); }
+
+    .badge {
+      display: inline-block;
+      margin: 8px 0 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>高精度傾斜角センサー 復旧ツール</h1>
+    <p>Safariだけ動かない場合に、このアプリ関連のキャッシュのみを削除します。Safari全体の履歴・全サイトデータは消しません。</p>
+    <span class="badge">対象: high-precision-sensor / table-level のみ</span>
+    <ul>
+      <li>Service Worker の登録解除</li>
+      <li>Cache Storage（<code>tilt-sensor-*</code>, <code>table-level-*</code>）削除</li>
+      <li>このアプリが使う localStorage キー削除</li>
+    </ul>
+
+    <div class="actions">
+      <button id="btn-reset" type="button">リセット実行</button>
+      <a href="./index.html">高精度傾斜角センサーを開く</a>
+      <a href="./table-level/">机の水平ガイドを開く</a>
+    </div>
+
+    <div id="log" class="log">待機中...
+</div>
+  </main>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const btn = document.getElementById('btn-reset');
+
+    function append(message, level = '') {
+      const line = `[${new Date().toLocaleTimeString()}] ${message}`;
+      const span = document.createElement('div');
+      span.textContent = line;
+      if (level) span.className = level;
+      logEl.appendChild(span);
+    }
+
+    async function resetOnlyThisApp() {
+      logEl.textContent = '';
+      append('リセット開始');
+
+      const targetScopeToken = '/high-precision-sensor/';
+      let unregistered = 0;
+      let deletedCaches = 0;
+
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          try {
+            const isTarget = typeof reg.scope === 'string' && reg.scope.includes(targetScopeToken);
+            if (isTarget) {
+              const ok = await reg.unregister();
+              if (ok) {
+                unregistered += 1;
+                append(`SW解除: ${reg.scope}`, 'ok');
+              } else {
+                append(`SW解除失敗: ${reg.scope}`, 'warn');
+              }
+            }
+          } catch (error) {
+            append(`SW解除エラー: ${error?.message ?? error}`, 'error');
+          }
+        }
+      } else {
+        append('Service Worker API 非対応', 'warn');
+      }
+
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (const key of keys) {
+          if (key.startsWith('tilt-sensor-') || key.startsWith('table-level-')) {
+            try {
+              const ok = await caches.delete(key);
+              if (ok) {
+                deletedCaches += 1;
+                append(`Cache削除: ${key}`, 'ok');
+              }
+            } catch (error) {
+              append(`Cache削除エラー: ${key} / ${error?.message ?? error}`, 'error');
+            }
+          }
+        }
+      } else {
+        append('Cache Storage API 非対応', 'warn');
+      }
+
+      const storageKeys = [
+        'sensor_calibration_v1',
+        'settings_v1',
+        'settings_v2',
+        'table_level_sensor_calibration_v1',
+        'table_level_settings_v1',
+        'table_level_settings_v2'
+      ];
+      let removedLocal = 0;
+      for (const key of storageKeys) {
+        if (localStorage.getItem(key) !== null) {
+          localStorage.removeItem(key);
+          removedLocal += 1;
+          append(`localStorage削除: ${key}`, 'ok');
+        }
+      }
+
+      append(`完了: SW=${unregistered}件, Cache=${deletedCaches}件, localStorage=${removedLocal}件`, 'ok');
+      append('次の手順: Safariを閉じる → 再起動 → アプリを開く');
+    }
+
+    btn.addEventListener('click', () => {
+      resetOnlyThisApp().catch((error) => {
+        append(`想定外エラー: ${error?.message ?? error}`, 'error');
+      });
+    });
+  </script>
+</body>
+</html>

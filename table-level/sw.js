@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'table-level-v1.1.3';
+const CACHE_VERSION = 'table-level-v1.1.4';
 const CACHE_PREFIX = 'table-level-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_URL = new URL(self.registration.scope);

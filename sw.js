@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'tilt-sensor-v7';
+const CACHE_VERSION = 'tilt-sensor-v8';
 const CACHE_PREFIX = 'tilt-sensor-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_URL = new URL(self.registration.scope);

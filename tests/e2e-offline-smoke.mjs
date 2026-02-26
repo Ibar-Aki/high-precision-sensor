@@ -156,7 +156,10 @@ async function run() {
       return Boolean(reg);
     });
     await page.waitForFunction(async (required) => {
-      const cache = await caches.open('tilt-sensor-v7-static');
+      const cacheNames = await caches.keys();
+      const activeName = cacheNames.find((name) => name.startsWith('tilt-sensor-') && name.endsWith('-static'));
+      if (!activeName) return false;
+      const cache = await caches.open(activeName);
       const keys = await cache.keys();
       const paths = new Set(keys.map((req) => new URL(req.url).pathname));
       return required.every((asset) => paths.has(asset));
@@ -167,7 +170,10 @@ async function run() {
     });
 
     const cachePaths = await page.evaluate(async () => {
-      const cache = await caches.open('tilt-sensor-v7-static');
+      const cacheNames = await caches.keys();
+      const activeName = cacheNames.find((name) => name.startsWith('tilt-sensor-') && name.endsWith('-static'));
+      if (!activeName) return [];
+      const cache = await caches.open(activeName);
       const keys = await cache.keys();
       return keys.map((req) => new URL(req.url).pathname);
     });
