@@ -13,14 +13,14 @@ const MODE_LABEL = {
   locking: '安定化中',
   measuring: '確定値'
 };
-const SETTINGS_PROFILE_VERSION = 2;
+const SETTINGS_PROFILE_VERSION = 3;
 const SETTINGS_PROFILE_FILTER_DEFAULTS = Object.freeze({
   emaAlpha: 0.06,
   kalmanQ: 0.0005,
   kalmanR: 0.18,
-  staticVarianceThreshold: 0.004,
-  staticDurationFrame: 18,
-  averagingSampleCount: 30,
+  staticVarianceThreshold: 0.0025,
+  staticDurationFrame: 60,
+  averagingSampleCount: 150,
   decimalPlaces: 2
 });
 

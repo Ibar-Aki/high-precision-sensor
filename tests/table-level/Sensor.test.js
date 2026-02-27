@@ -40,6 +40,61 @@ describe('table-level/sensor', () => {
     expect(Math.abs(angle.pitchDeg)).toBeGreaterThan(0.5);
   });
 
+  it('既定値では確定値モードへの遷移が遅くなること', () => {
+    const sensor = new TableLevelSensor();
+    for (let i = 0; i < 160; i++) {
+      sensor.process(2.0, -1.0);
+    }
+    expect(sensor.getMeasurementMode()).not.toBe('measuring');
+
+    for (let i = 0; i < 80; i++) {
+      sensor.process(2.0, -1.0);
+    }
+    expect(sensor.getMeasurementMode()).toBe('measuring');
+  });
+
+  it('短い外乱はヒステリシスで吸収し長い外乱でactiveへ戻ること', () => {
+    const sensor = new TableLevelSensor({ staticDurationFrames: 5, averagingSampleCount: 8, staticVarianceThreshold: 0.001 });
+    for (let i = 0; i < 80; i++) {
+      sensor.process(2.0, -1.0);
+    }
+    expect(sensor.getMeasurementMode()).toBe('measuring');
+
+    for (let i = 0; i < 8; i++) {
+      sensor.process(i % 2 === 0 ? 15 : -12, i % 2 === 0 ? -14 : 13);
+    }
+    expect(sensor.getMeasurementMode()).not.toBe('active');
+
+    for (let i = 0; i < 20; i++) {
+      sensor.process(i % 2 === 0 ? 15 : -12, i % 2 === 0 ? -14 : 13);
+    }
+    expect(sensor.getMeasurementMode()).toBe('active');
+  });
+
+  it('確定値表示が微小ノイズで暴れにくいこと', () => {
+    const sensor = new TableLevelSensor({ staticDurationFrames: 3, averagingSampleCount: 3, staticVarianceThreshold: 0.01 });
+    for (let i = 0; i < 40; i++) {
+      sensor.process(2.0, -1.0);
+    }
+    expect(sensor.getMeasurementMode()).toBe('measuring');
+
+    const finalPitchValues = [];
+    for (let i = 0; i < 40; i++) {
+      const pitch = i % 2 === 0 ? 2.03 : 1.97;
+      const roll = i % 2 === 0 ? -1.03 : -0.97;
+      sensor.process(pitch, roll);
+      const final = sensor.getDeskAngles('final');
+      if (Number.isFinite(final.pitchDeg)) {
+        finalPitchValues.push(final.pitchDeg);
+      }
+    }
+
+    expect(finalPitchValues.length).toBeGreaterThan(0);
+    const minPitch = Math.min(...finalPitchValues);
+    const maxPitch = Math.max(...finalPitchValues);
+    expect(maxPitch - minPitch).toBeLessThanOrEqual(0.05);
+  });
+
   it('軸マッピングと符号反転が反映されること', () => {
     const sensor = new TableLevelSensor();
     sensor.setAxisConfig({ phonePitchAxis: 'width', invertPitch: true, invertRoll: false });

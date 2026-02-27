@@ -76,13 +76,13 @@ describe('table-level/settings', () => {
 
     expect(loaded.ok).toBe(true);
     expect(loaded.migrated).toBe(true);
-    expect(loaded.value.settingsVersion).toBe(2);
+    expect(loaded.value.settingsVersion).toBe(3);
     expect(loaded.value.filterAlpha).toBe(0.06);
     expect(loaded.value.kalmanQ).toBe(0.0005);
     expect(loaded.value.kalmanR).toBe(0.18);
-    expect(loaded.value.staticVarianceThreshold).toBe(0.004);
-    expect(loaded.value.staticDurationFrames).toBe(16);
-    expect(loaded.value.averagingSampleCount).toBe(24);
+    expect(loaded.value.staticVarianceThreshold).toBe(0.0025);
+    expect(loaded.value.staticDurationFrames).toBe(60);
+    expect(loaded.value.averagingSampleCount).toBe(150);
     expect(loaded.value.measurementTimeoutSec).toBe(20);
   });
 });

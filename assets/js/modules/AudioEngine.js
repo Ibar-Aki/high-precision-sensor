@@ -42,10 +42,15 @@ export class AudioEngine {
         this._resumePromise = null;
         this._lastResumeAttemptAt = -Infinity;
         this._resumeRetryIntervalMs = 1000;
+        this._initAttempted = false;
     }
 
     init() {
-        if (this._initialized) return;
+        this._initAttempted = true;
+        if (this._initialized) {
+            this._syncOutputMode();
+            return;
+        }
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             this.ctx = new AudioContext();
@@ -84,10 +89,10 @@ export class AudioEngine {
             }
 
             this._initialized = true;
-            this._syncOutputMode();
         } catch (e) {
             console.warn('Web Audio API 初期化エラー:', e);
         }
+        this._syncOutputMode();
     }
 
     update(pitch, roll) {
@@ -278,7 +283,10 @@ export class AudioEngine {
     }
 
     _ensureSpeechAnnouncements() {
-        if (!this._initialized || this._speechTimerId !== null || typeof window === 'undefined') {
+        if (!this._initAttempted || this._speechTimerId !== null || typeof window === 'undefined') {
+            return;
+        }
+        if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
             return;
         }
         this._speechTimerId = window.setInterval(() => {
@@ -307,6 +315,11 @@ export class AudioEngine {
         }
 
         const synth = window.speechSynthesis;
+        try {
+            synth.resume?.();
+        } catch {
+            // Safari で resume 非対応/失敗時も読み上げ続行
+        }
         const utterance = new SpeechSynthesisUtterance(this._buildAnnouncement(this._latestPitch, this._latestRoll));
         utterance.lang = SPEECH_LANG;
         utterance.volume = this.masterVolume;

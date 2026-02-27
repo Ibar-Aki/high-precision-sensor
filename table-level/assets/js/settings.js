@@ -1,12 +1,12 @@
 const SETTINGS_KEY = 'tableLevelGuide_v1_1';
-const SETTINGS_VERSION = 2;
+const SETTINGS_VERSION = 3;
 const MIGRATION_FILTER_DEFAULTS = Object.freeze({
   filterAlpha: 0.06,
   kalmanQ: 0.0005,
   kalmanR: 0.18,
-  staticVarianceThreshold: 0.004,
-  staticDurationFrames: 16,
-  averagingSampleCount: 24,
+  staticVarianceThreshold: 0.0025,
+  staticDurationFrames: 60,
+  averagingSampleCount: 150,
   measurementTimeoutSec: 20
 });
 
@@ -27,9 +27,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   filterAlpha: 0.06,
   kalmanQ: 0.0005,
   kalmanR: 0.18,
-  staticVarianceThreshold: 0.004,
-  staticDurationFrames: 16,
-  averagingSampleCount: 24,
+  staticVarianceThreshold: 0.0025,
+  staticDurationFrames: 60,
+  averagingSampleCount: 150,
   measurementTimeoutSec: 20,
   maxTurnsWarning: 5,
   minTurnsToShow: 0.25

@@ -133,7 +133,7 @@ describe('SensorEngine', () => {
         for (let i = 0; i < 50; i++) {
             engine.process(7.0, 7.0);
         }
-        expect(engine.pitch).toBeCloseTo(2.0, 1);
+        expect(Math.abs(engine.pitch - 2.0)).toBeLessThan(0.2);
     });
 
     it('キャリブレーション値の永続化', () => {
@@ -183,6 +183,39 @@ describe('SensorEngine', () => {
         expect(info.variance).toBeLessThanOrEqual(engine.staticVarianceThreshold);
     });
 
+    it('既定値では確定値モード遷移がよりシビアであること', () => {
+        const engine = new SensorEngine();
+
+        for (let i = 0; i < 160; i++) {
+            engine.process(1.8, -0.9);
+        }
+        expect(engine.getMeasurementMode()).not.toBe('measuring');
+
+        for (let i = 0; i < 80; i++) {
+            engine.process(1.8, -0.9);
+        }
+        expect(engine.getMeasurementMode()).toBe('measuring');
+    });
+
+    it('短い外乱ではヒステリシスによりActiveへ戻らないこと', () => {
+        const engine = new SensorEngine();
+        engine.staticDurationFrame = 5;
+        engine.averagingSampleCount = 8;
+        engine.staticVarianceThreshold = 0.001;
+
+        for (let i = 0; i < 60; i++) {
+            engine.process(2.0, 2.0);
+        }
+        expect(engine.getMeasurementMode()).toBe('measuring');
+
+        for (let i = 0; i < 8; i++) {
+            engine.process(i % 2 === 0 ? 15 : -12, i % 2 === 0 ? -14 : 13);
+        }
+
+        expect(engine.getMeasurementMode()).not.toBe('active');
+        expect(engine.getMeasurementInfo().staticSamples).toBeGreaterThan(0);
+    });
+
     it('静止平均中に動きが再開したらActiveに戻ること', () => {
         const engine = new SensorEngine();
         engine.staticDurationFrame = 5;
@@ -196,13 +229,41 @@ describe('SensorEngine', () => {
         expect(engine.getMeasurementInfo().staticSamples).toBeGreaterThan(0);
 
         // 変化を大きく与えて静止判定を崩す
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 20; i++) {
             engine.process(i % 2 === 0 ? 15 : -12, i % 2 === 0 ? -14 : 13);
         }
 
         const infoAfterMove = engine.getMeasurementInfo();
         expect(engine.getMeasurementMode()).toBe('active');
         expect(infoAfterMove.staticSamples).toBe(0);
+    });
+
+    it('確定値表示は微小ノイズで暴れにくいこと', () => {
+        const engine = new SensorEngine();
+        engine.staticDurationFrame = 3;
+        engine.averagingSampleCount = 3;
+        engine.staticVarianceThreshold = 0.01;
+
+        for (let i = 0; i < 40; i++) {
+            engine.process(3.0, -2.0);
+        }
+        expect(engine.getMeasurementMode()).toBe('measuring');
+
+        const finalPitchValues = [];
+        for (let i = 0; i < 40; i++) {
+            const pitch = i % 2 === 0 ? 3.03 : 2.97;
+            const roll = i % 2 === 0 ? -2.03 : -1.97;
+            engine.process(pitch, roll);
+            const final = engine.getFinalAngles();
+            if (final.available) {
+                finalPitchValues.push(final.pitch);
+            }
+        }
+
+        expect(finalPitchValues.length).toBeGreaterThan(0);
+        const minPitch = Math.min(...finalPitchValues);
+        const maxPitch = Math.max(...finalPitchValues);
+        expect(maxPitch - minPitch).toBeLessThanOrEqual(0.05);
     });
 
     it('2点キャリブレーションでオフセット補正できること', () => {

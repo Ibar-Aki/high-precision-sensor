@@ -40,6 +40,8 @@ export class SensorEngine {
         this.liveRoll = 0;
         this.finalPitch = NaN;
         this.finalRoll = NaN;
+        this.displayFinalPitch = NaN;
+        this.displayFinalRoll = NaN;
         this.hasFinalMeasurement = false;
 
         // 生データ (デバッグ用)
@@ -59,10 +61,15 @@ export class SensorEngine {
         this.locked = false;
 
         // ハイブリッド静止平均パラメータ
-        this.staticVarianceThreshold = 0.004;
-        this.staticDurationFrame = 18;
-        this.averagingSampleCount = 30;
+        this.staticVarianceThreshold = 0.0025;
+        this.staticDurationFrame = 60;
+        this.averagingSampleCount = 150;
         this.maxBufferSize = 2000;
+        this.staticEntryThresholdScale = 1.0;
+        this.staticExitThresholdScale = 1.8;
+        this.staticExitGraceFrames = 12;
+        this.finalDisplayDeadband = 0.02;
+        this.finalDisplayMaxStep = 0.01;
 
         // ハイブリッド静止平均状態
         this.measurementMode = 'active'; // active | locking | measuring
@@ -79,6 +86,7 @@ export class SensorEngine {
         this.staticPitchSum = 0;
         this.staticRollSum = 0;
         this.staticSampleCount = 0;
+        this._staticExitCount = 0;
 
         // 2点キャリブレーション状態
         this.twoPointCalibrationTimeoutMs = 30000;
@@ -161,7 +169,7 @@ export class SensorEngine {
 
         // 4. 動き分散を監視し、ハイブリッドモードを切り替える
         this._updateMotionWindow(kfP, kfR);
-        const staticDetected = this._isStaticDetected();
+        const staticDetected = this._isStaticDetectedWithHysteresis();
 
         if (staticDetected) {
             // Active -> Static への遷移時は平均バッファを初期化
@@ -171,15 +179,17 @@ export class SensorEngine {
 
             // Static Mode: カルマン後値を積算平均
             this._pushStaticSample(kfP, kfR);
-            this.measurementMode = this.staticSampleCount >= this._toPositiveInt(this.averagingSampleCount, 30)
+            this.measurementMode = this.staticSampleCount >= this._toPositiveInt(this.averagingSampleCount, 150)
                 ? 'measuring'
                 : 'locking';
 
             this.finalPitch = this.staticPitchSum / this.staticSampleCount;
             this.finalRoll = this.staticRollSum / this.staticSampleCount;
+            this.displayFinalPitch = this._updateDisplayFinalValue(this.displayFinalPitch, this.finalPitch);
+            this.displayFinalRoll = this._updateDisplayFinalValue(this.displayFinalRoll, this.finalRoll);
             this.hasFinalMeasurement = this.measurementMode === 'measuring';
-            this.pitch = this.finalPitch;
-            this.roll = this.finalRoll;
+            this.pitch = Number.isFinite(this.displayFinalPitch) ? this.displayFinalPitch : this.finalPitch;
+            this.roll = Number.isFinite(this.displayFinalRoll) ? this.displayFinalRoll : this.finalRoll;
         } else {
             // Static -> Active へ戻る際は静止平均状態をクリア
             if (this.measurementMode !== 'active') {
@@ -188,6 +198,8 @@ export class SensorEngine {
             }
             this.finalPitch = NaN;
             this.finalRoll = NaN;
+            this.displayFinalPitch = NaN;
+            this.displayFinalRoll = NaN;
             this.hasFinalMeasurement = false;
             this.pitch = this.livePitch;
             this.roll = this.liveRoll;
@@ -333,6 +345,8 @@ export class SensorEngine {
             liveRoll: this.liveRoll,
             finalPitch: this.finalPitch,
             finalRoll: this.finalRoll,
+            finalDisplayPitch: this.displayFinalPitch,
+            finalDisplayRoll: this.displayFinalRoll,
             hasFinalMeasurement: this.hasFinalMeasurement
         };
     }
@@ -345,13 +359,17 @@ export class SensorEngine {
     }
 
     getFinalAngles() {
-        if (!this.hasFinalMeasurement || !Number.isFinite(this.finalPitch) || !Number.isFinite(this.finalRoll)) {
+        if (
+            !this.hasFinalMeasurement
+            || !Number.isFinite(this.displayFinalPitch)
+            || !Number.isFinite(this.displayFinalRoll)
+        ) {
             return { available: false, pitch: null, roll: null };
         }
         return {
             available: true,
-            pitch: this.finalPitch,
-            roll: this.finalRoll
+            pitch: this.displayFinalPitch,
+            roll: this.displayFinalRoll
         };
     }
 
@@ -375,9 +393,12 @@ export class SensorEngine {
         this.liveRoll = 0;
         this.finalPitch = NaN;
         this.finalRoll = NaN;
+        this.displayFinalPitch = NaN;
+        this.displayFinalRoll = NaN;
         this.hasFinalMeasurement = false;
         this._prevPitch = 0;
         this._prevRoll = 0;
+        this._staticExitCount = 0;
         resetMotionWindow(this);
         this.measurementMode = 'active';
         this._resetStaticBuffer();
@@ -410,21 +431,84 @@ export class SensorEngine {
     }
 
     _updateMotionWindow(kfPitch, kfRoll) {
-        const windowSize = this._toPositiveInt(this.staticDurationFrame, 18);
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 60);
         updateMotionWindow(this, kfPitch, kfRoll, windowSize);
     }
 
     _pushMotionMetric(metric) {
-        const windowSize = this._toPositiveInt(this.staticDurationFrame, 18);
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 60);
         pushMotionMetric(this, metric, windowSize);
     }
 
-    _isStaticDetected() {
-        const windowSize = this._toPositiveInt(this.staticDurationFrame, 18);
-        const threshold = Number.isFinite(this.staticVarianceThreshold) && this.staticVarianceThreshold >= 0
+    _isStaticDetectedWithHysteresis() {
+        const windowSize = this._toPositiveInt(this.staticDurationFrame, 60);
+        const sampleCount = this.motionWindow.length - this.motionWindowStart;
+        if (sampleCount < windowSize) {
+            this._staticExitCount = 0;
+            return false;
+        }
+
+        const baseThreshold = Number.isFinite(this.staticVarianceThreshold) && this.staticVarianceThreshold >= 0
             ? this.staticVarianceThreshold
-            : 0.004;
-        return isStaticDetected(this, windowSize, threshold);
+            : 0.0025;
+        const entryScale = Number.isFinite(this.staticEntryThresholdScale) && this.staticEntryThresholdScale > 0
+            ? this.staticEntryThresholdScale
+            : 1.0;
+        const exitScale = Number.isFinite(this.staticExitThresholdScale) && this.staticExitThresholdScale > 0
+            ? this.staticExitThresholdScale
+            : 1.8;
+        const entryThreshold = baseThreshold * entryScale;
+        const exitThreshold = baseThreshold * exitScale;
+
+        if (this.measurementMode === 'active') {
+            this._staticExitCount = 0;
+            return this._isMotionCalm(windowSize, entryThreshold);
+        }
+
+        if (this._isMotionCalm(windowSize, exitThreshold)) {
+            this._staticExitCount = 0;
+            return true;
+        }
+
+        this._staticExitCount += 1;
+        const graceFrames = this._toPositiveInt(this.staticExitGraceFrames, 12);
+        return this._staticExitCount < graceFrames;
+    }
+
+    _updateDisplayFinalValue(previous, target) {
+        if (!Number.isFinite(target)) {
+            return NaN;
+        }
+        if (!Number.isFinite(previous)) {
+            return target;
+        }
+
+        const delta = target - previous;
+        const deadband = Number.isFinite(this.finalDisplayDeadband) && this.finalDisplayDeadband >= 0
+            ? this.finalDisplayDeadband
+            : 0.02;
+        if (Math.abs(delta) <= deadband) {
+            return previous;
+        }
+
+        const maxStep = Number.isFinite(this.finalDisplayMaxStep) && this.finalDisplayMaxStep > 0
+            ? this.finalDisplayMaxStep
+            : 0.01;
+        const step = Math.min(Math.abs(delta), maxStep);
+        return previous + Math.sign(delta) * step;
+    }
+
+    _isMotionCalm(windowSize, varianceThreshold) {
+        if (!isStaticDetected(this, windowSize, varianceThreshold)) {
+            return false;
+        }
+        const sampleCount = this.motionWindow.length - this.motionWindowStart;
+        if (sampleCount <= 0) {
+            return false;
+        }
+        const meanMotion = this.motionWindowSum / sampleCount;
+        const meanThreshold = Math.sqrt(Math.max(varianceThreshold, 0));
+        return meanMotion <= meanThreshold;
     }
 
     _pushStaticSample(kfPitch, kfRoll) {
@@ -434,6 +518,7 @@ export class SensorEngine {
 
     _resetStaticBuffer() {
         resetStaticBuffer(this);
+        this._staticExitCount = 0;
     }
 
     _compactMotionWindowIfNeeded() {

@@ -213,6 +213,24 @@ describe('AudioEngine', () => {
         expect(engine.gains.back.gain.setTargetAtTime.mock.calls.length).toBe(initialBackSilenceCalls);
     });
 
+    it('WebAudio初期化失敗時でも読み上げモードは動作すること', () => {
+        global.window.AudioContext = class FailingAudioContext {
+            constructor() {
+                throw new Error('audio init failed');
+            }
+        };
+        global.window.webkitAudioContext = global.window.AudioContext;
+
+        const engine = new AudioEngine();
+        engine.enabled = true;
+        engine.setOutputType('speech');
+        engine.init();
+        engine.update(-0.2, 0.3);
+        vi.advanceTimersByTime(10000);
+
+        expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
+    });
+
     it('AudioContext再開要求を多重発行しないこと', () => {
         const engine = new AudioEngine();
         engine.enabled = true;

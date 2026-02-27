@@ -21,9 +21,14 @@ export class TableLevelSensor {
     this.emaAlpha = options.emaAlpha ?? 0.06;
     this.deadzone = options.deadzone ?? 0.005;
 
-    this.staticVarianceThreshold = options.staticVarianceThreshold ?? 0.004;
-    this.staticDurationFrames = options.staticDurationFrames ?? 16;
-    this.averagingSampleCount = options.averagingSampleCount ?? 24;
+    this.staticVarianceThreshold = options.staticVarianceThreshold ?? 0.0025;
+    this.staticDurationFrames = options.staticDurationFrames ?? 60;
+    this.averagingSampleCount = options.averagingSampleCount ?? 150;
+    this.staticEntryThresholdScale = 1.0;
+    this.staticExitThresholdScale = 1.8;
+    this.staticExitGraceFrames = 12;
+    this.finalDisplayDeadband = 0.02;
+    this.finalDisplayMaxStep = 0.01;
 
     this.phonePitchAxis = options.phonePitchAxis ?? 'depth';
     this.invertPitch = Boolean(options.invertPitch);
@@ -45,6 +50,8 @@ export class TableLevelSensor {
     this.liveRoll = 0;
     this.finalPitch = NaN;
     this.finalRoll = NaN;
+    this.displayFinalPitch = NaN;
+    this.displayFinalRoll = NaN;
     this.hasFinalMeasurement = false;
     this.sampleCount = 0;
 
@@ -71,6 +78,7 @@ export class TableLevelSensor {
     this.staticPitchSum = 0;
     this.staticRollSum = 0;
     this.staticSampleCount = 0;
+    this._staticExitCount = 0;
 
     this.loadCalibration();
   }
@@ -89,7 +97,7 @@ export class TableLevelSensor {
     this._updateLiveAngles(filteredPitch, filteredRoll);
 
     this._updateMotionWindow(filteredPitch, filteredRoll);
-    const staticDetected = this._isStaticDetected();
+    const staticDetected = this._isStaticDetectedWithHysteresis();
 
     if (staticDetected) {
       if (this.measurementMode === 'active') {
@@ -97,15 +105,17 @@ export class TableLevelSensor {
       }
 
       this._pushStaticSample(filteredPitch, filteredRoll);
-      this.measurementMode = this.staticSampleCount >= toPositiveInt(this.averagingSampleCount, 24)
+      this.measurementMode = this.staticSampleCount >= toPositiveInt(this.averagingSampleCount, 150)
         ? 'measuring'
         : 'locking';
 
       this.finalPitch = this.staticPitchSum / this.staticSampleCount;
       this.finalRoll = this.staticRollSum / this.staticSampleCount;
+      this.displayFinalPitch = this._updateDisplayFinalValue(this.displayFinalPitch, this.finalPitch);
+      this.displayFinalRoll = this._updateDisplayFinalValue(this.displayFinalRoll, this.finalRoll);
       this.hasFinalMeasurement = this.measurementMode === 'measuring';
-      this.pitch = this.finalPitch;
-      this.roll = this.finalRoll;
+      this.pitch = Number.isFinite(this.displayFinalPitch) ? this.displayFinalPitch : this.finalPitch;
+      this.roll = Number.isFinite(this.displayFinalRoll) ? this.displayFinalRoll : this.finalRoll;
       return true;
     }
 
@@ -117,6 +127,8 @@ export class TableLevelSensor {
     this.roll = this.liveRoll;
     this.finalPitch = NaN;
     this.finalRoll = NaN;
+    this.displayFinalPitch = NaN;
+    this.displayFinalRoll = NaN;
     this.hasFinalMeasurement = false;
     return true;
   }
@@ -302,6 +314,8 @@ export class TableLevelSensor {
     this.liveRoll = 0;
     this.finalPitch = NaN;
     this.finalRoll = NaN;
+    this.displayFinalPitch = NaN;
+    this.displayFinalRoll = NaN;
     this.hasFinalMeasurement = false;
     this.rawPitch = 0;
     this.rawRoll = 0;
@@ -309,6 +323,7 @@ export class TableLevelSensor {
 
     this.measurementMode = 'active';
     this.measurementVariance = Infinity;
+    this._staticExitCount = 0;
     resetMotionWindow(this);
     this._resetStaticBuffers();
   }
@@ -330,13 +345,19 @@ export class TableLevelSensor {
       liveRoll: this.liveRoll,
       finalPitch: this.finalPitch,
       finalRoll: this.finalRoll,
+      finalDisplayPitch: this.displayFinalPitch,
+      finalDisplayRoll: this.displayFinalRoll,
       hasFinalMeasurement: this.hasFinalMeasurement
     };
   }
 
   getDeskAngles(source = 'current') {
-    const pitchSource = source === 'live' ? this.livePitch : (source === 'final' ? this.finalPitch : this.pitch);
-    const rollSource = source === 'live' ? this.liveRoll : (source === 'final' ? this.finalRoll : this.roll);
+    const pitchSource = source === 'live'
+      ? this.livePitch
+      : (source === 'final' ? this.displayFinalPitch : this.pitch);
+    const rollSource = source === 'live'
+      ? this.liveRoll
+      : (source === 'final' ? this.displayFinalRoll : this.roll);
     if (!Number.isFinite(pitchSource) || !Number.isFinite(rollSource)) {
       return { pitchDeg: NaN, rollDeg: NaN };
     }
@@ -356,18 +377,48 @@ export class TableLevelSensor {
   }
 
   _updateMotionWindow(filteredPitch, filteredRoll) {
-    const windowSize = toPositiveInt(this.staticDurationFrames, 16);
+    const windowSize = toPositiveInt(this.staticDurationFrames, 60);
     updateMotionWindow(this, filteredPitch, filteredRoll, windowSize);
   }
 
   _pushMotionMetric(metric) {
-    const windowSize = toPositiveInt(this.staticDurationFrames, 16);
+    const windowSize = toPositiveInt(this.staticDurationFrames, 60);
     pushMotionMetric(this, metric, windowSize);
   }
 
-  _isStaticDetected() {
-    const windowSize = toPositiveInt(this.staticDurationFrames, 16);
-    return isStaticDetected(this, windowSize, this.staticVarianceThreshold);
+  _isStaticDetectedWithHysteresis() {
+    const windowSize = toPositiveInt(this.staticDurationFrames, 60);
+    const sampleCount = this.motionWindow.length - this.motionWindowStart;
+    if (sampleCount < windowSize) {
+      this._staticExitCount = 0;
+      return false;
+    }
+
+    const baseThreshold = Number.isFinite(this.staticVarianceThreshold) && this.staticVarianceThreshold >= 0
+      ? this.staticVarianceThreshold
+      : 0.0025;
+    const entryScale = Number.isFinite(this.staticEntryThresholdScale) && this.staticEntryThresholdScale > 0
+      ? this.staticEntryThresholdScale
+      : 1.0;
+    const exitScale = Number.isFinite(this.staticExitThresholdScale) && this.staticExitThresholdScale > 0
+      ? this.staticExitThresholdScale
+      : 1.8;
+    const entryThreshold = baseThreshold * entryScale;
+    const exitThreshold = baseThreshold * exitScale;
+
+    if (this.measurementMode === 'active') {
+      this._staticExitCount = 0;
+      return this._isMotionCalm(windowSize, entryThreshold);
+    }
+
+    if (this._isMotionCalm(windowSize, exitThreshold)) {
+      this._staticExitCount = 0;
+      return true;
+    }
+
+    this._staticExitCount += 1;
+    const graceFrames = toPositiveInt(this.staticExitGraceFrames, 12);
+    return this._staticExitCount < graceFrames;
   }
 
   _pushStaticSample(pitch, roll) {
@@ -401,8 +452,45 @@ export class TableLevelSensor {
     this.liveRoll = nextRoll;
   }
 
+  _updateDisplayFinalValue(previous, target) {
+    if (!Number.isFinite(target)) {
+      return NaN;
+    }
+    if (!Number.isFinite(previous)) {
+      return target;
+    }
+
+    const delta = target - previous;
+    const deadband = Number.isFinite(this.finalDisplayDeadband) && this.finalDisplayDeadband >= 0
+      ? this.finalDisplayDeadband
+      : 0.02;
+    if (Math.abs(delta) <= deadband) {
+      return previous;
+    }
+
+    const maxStep = Number.isFinite(this.finalDisplayMaxStep) && this.finalDisplayMaxStep > 0
+      ? this.finalDisplayMaxStep
+      : 0.01;
+    const step = Math.min(Math.abs(delta), maxStep);
+    return previous + Math.sign(delta) * step;
+  }
+
+  _isMotionCalm(windowSize, varianceThreshold) {
+    if (!isStaticDetected(this, windowSize, varianceThreshold)) {
+      return false;
+    }
+    const sampleCount = this.motionWindow.length - this.motionWindowStart;
+    if (sampleCount <= 0) {
+      return false;
+    }
+    const meanMotion = this.motionWindowSum / sampleCount;
+    const meanThreshold = Math.sqrt(Math.max(varianceThreshold, 0));
+    return meanMotion <= meanThreshold;
+  }
+
   _resetStaticBuffers() {
     resetStaticBuffer(this);
+    this._staticExitCount = 0;
   }
 
   _isTwoPointCalibrationExpired() {

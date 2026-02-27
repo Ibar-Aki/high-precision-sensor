@@ -336,25 +336,25 @@
             <div class="setting-item">
               <label for="static-variance-threshold">静止判定閾値（分散）</label>
               <div class="slider-row">
-                <input type="range" id="static-variance-threshold" min="0.0001" max="0.02" step="0.0001" value="0.004"
+                <input type="range" id="static-variance-threshold" min="0.0001" max="0.02" step="0.0001" value="0.0025"
                   class="slider">
-                <span id="static-variance-threshold-val" class="slider-val">0.0040</span>
+                <span id="static-variance-threshold-val" class="slider-val">0.0025</span>
               </div>
               <p class="setting-hint">小さいほど厳密（誤ロック減）、大きいほどロックしやすい</p>
             </div>
             <div class="setting-item">
               <label for="static-duration-frame">静止判定フレーム数</label>
               <div class="slider-row">
-                <input type="range" id="static-duration-frame" min="10" max="120" step="1" value="18" class="slider">
-                <span id="static-duration-frame-val" class="slider-val">18</span>
+                <input type="range" id="static-duration-frame" min="10" max="120" step="1" value="60" class="slider">
+                <span id="static-duration-frame-val" class="slider-val">60</span>
               </div>
               <p class="setting-hint">値を上げるほど誤ロックは減るが、確定まで遅くなる</p>
             </div>
             <div class="setting-item">
               <label for="averaging-sample-count">静止平均サンプル数</label>
               <div class="slider-row">
-                <input type="range" id="averaging-sample-count" min="10" max="300" step="1" value="30" class="slider">
-                <span id="averaging-sample-count-val" class="slider-val">30</span>
+                <input type="range" id="averaging-sample-count" min="10" max="300" step="1" value="150" class="slider">
+                <span id="averaging-sample-count-val" class="slider-val">150</span>
               </div>
               <p class="setting-hint">値を上げるほど高精度だが、確定値到達が遅くなる</p>
             </div>
