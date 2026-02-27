@@ -3,6 +3,7 @@ import { VoiceGuide } from './voice.js';
 import { calcAdjustmentInstructions, isLevel } from './calculator.js';
 import { TableLevelSettingsManager, DEFAULT_SETTINGS } from './settings.js';
 import { getDirectionLabel, getLegLabel } from './i18n.js';
+import { CURRENT_UPDATED_AT_UTC, CURRENT_UPDATED_AT_JST } from '../../../shared/js/BuildInfo.js';
 
 const BOLT_PITCH_MAP = {
   M6: 1.0,
@@ -26,6 +27,12 @@ const CALIBRATION_STEP_TEXT = {
   awaiting_second: '2点校正: 端末を180度回転して2点目を記録してください',
   completed: '2点校正が完了しました'
 };
+const VERSION_FRESHNESS_LABEL = Object.freeze({
+  checking: '確認中',
+  latest: '最新版',
+  stale: '更新あり',
+  unknown: '判定不能'
+});
 
 function createSessionId(prefix = 'TL') {
   const now = new Date();
@@ -73,6 +80,9 @@ class TableLevelApp {
     this._lastAdjustmentUpdateAt = 0;
     this._lastStatusCode = 'INIT';
     this._sessionId = createSessionId();
+    this._versionPollIntervalMs = 60000;
+    this._versionPollTimerId = null;
+    this._versionCheckInFlight = false;
     this._orientationHandler = (event) => this._onOrientation(event);
     this._resizeHandler = () => this._updateOrientationGuard();
     this._orientationChangeHandler = () => this._updateOrientationGuard();
@@ -95,6 +105,10 @@ class TableLevelApp {
     this._updateOrientationGuard();
     this._setSessionInfo(this._sessionId);
     this._setStatusCode('INIT');
+    this._setCurrentUpdatedAt(CURRENT_UPDATED_AT_JST);
+    this._setLatestUpdatedAt('--');
+    this._setVersionFreshness(VERSION_FRESHNESS_LABEL.checking);
+    this._startVersionFreshnessMonitor();
 
     if (loaded.migrated) {
       const migrationSaveResult = this.settingsManager.save(this.settings);
@@ -168,7 +182,10 @@ class TableLevelApp {
       legBL: byId('leg-BL'),
       legBR: byId('leg-BR'),
       sessionId: byId('session-id'),
-      statusCode: byId('status-code')
+      statusCode: byId('status-code'),
+      currentUpdatedAt: byId('current-updated-at'),
+      latestUpdatedAt: byId('latest-updated-at'),
+      versionFreshness: byId('version-freshness')
     };
   }
 
@@ -794,6 +811,61 @@ class TableLevelApp {
     }
   }
 
+  _setCurrentUpdatedAt(text) {
+    if (!this.els.currentUpdatedAt) return;
+    this.els.currentUpdatedAt.textContent = text || '-';
+  }
+
+  _setLatestUpdatedAt(text) {
+    if (!this.els.latestUpdatedAt) return;
+    this.els.latestUpdatedAt.textContent = text || '--';
+  }
+
+  _setVersionFreshness(text) {
+    if (!this.els.versionFreshness) return;
+    this.els.versionFreshness.textContent = text || VERSION_FRESHNESS_LABEL.unknown;
+  }
+
+  _startVersionFreshnessMonitor() {
+    this._checkVersionFreshness();
+    if (this._versionPollTimerId !== null) return;
+    this._versionPollTimerId = window.setInterval(() => {
+      this._checkVersionFreshness();
+    }, this._versionPollIntervalMs);
+  }
+
+  _stopVersionFreshnessMonitor() {
+    if (this._versionPollTimerId === null) return;
+    clearInterval(this._versionPollTimerId);
+    this._versionPollTimerId = null;
+  }
+
+  async _checkVersionFreshness() {
+    if (this._versionCheckInFlight) return;
+    this._versionCheckInFlight = true;
+    try {
+      const res = await fetch(`../version.json?ts=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`http_${res.status}`);
+      const payload = await res.json();
+      const latestUtc = typeof payload?.updatedAtUtc === 'string' ? payload.updatedAtUtc : null;
+      const latestJst = typeof payload?.updatedAtJst === 'string' ? payload.updatedAtJst : null;
+      if (!latestUtc || !latestJst) {
+        throw new Error('invalid_version_payload');
+      }
+      this._setLatestUpdatedAt(latestJst);
+      this._setVersionFreshness(
+        latestUtc === CURRENT_UPDATED_AT_UTC
+          ? VERSION_FRESHNESS_LABEL.latest
+          : VERSION_FRESHNESS_LABEL.stale
+      );
+    } catch {
+      this._setLatestUpdatedAt('--');
+      this._setVersionFreshness(VERSION_FRESHNESS_LABEL.unknown);
+    } finally {
+      this._versionCheckInFlight = false;
+    }
+  }
+
   _showPermissionHelp(code) {
     if (this.els.permissionHelpCode) {
       this.els.permissionHelpCode.textContent = `状態コード: ${code}`;
@@ -814,6 +886,7 @@ class TableLevelApp {
       window.cancelAnimationFrame(this._loopFrameId);
       this._loopFrameId = null;
     }
+    this._stopVersionFreshnessMonitor();
 
     if (this.hasOrientationListener) {
       window.removeEventListener('deviceorientation', this._orientationHandler, true);

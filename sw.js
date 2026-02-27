@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'tilt-sensor-v8';
+const CACHE_VERSION = 'tilt-sensor-v9';
 const CACHE_PREFIX = 'tilt-sensor-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_URL = new URL(self.registration.scope);
@@ -27,6 +27,7 @@ const CORE_SHELL = [
     './assets/js/modules/HybridStaticUtils.js',
     './shared/js/KalmanFilter1D.js',
     './shared/js/HybridStaticUtils.js',
+    './shared/js/BuildInfo.js',
     './assets/icons/icon-192.svg',
     './assets/icons/icon-512.svg',
 ];

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'table-level-v1.1.4';
+const CACHE_VERSION = 'table-level-v1.1.5';
 const CACHE_PREFIX = 'table-level-';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SCOPE_URL = new URL(self.registration.scope);
@@ -21,6 +21,7 @@ const CORE_SHELL = [
   './assets/js/hybrid-static-utils.js',
   '../shared/js/KalmanFilter1D.js',
   '../shared/js/HybridStaticUtils.js',
+  '../shared/js/BuildInfo.js',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
   './assets/icons/apple-touch-icon.png'

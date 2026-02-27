@@ -147,6 +147,7 @@ async function run() {
       '/table-level/assets/js/hybrid-static-utils.js',
       '/shared/js/KalmanFilter1D.js',
       '/shared/js/HybridStaticUtils.js',
+      '/shared/js/BuildInfo.js',
       '/table-level/assets/icons/icon-192.png',
       '/table-level/assets/icons/icon-512.png',
       '/table-level/assets/icons/apple-touch-icon.png'
@@ -165,6 +166,11 @@ async function run() {
       return required.every((asset) => paths.has(asset));
     }, precacheRequiredAssets, { timeout: 10000 });
     await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForFunction(() => {
+      const current = document.getElementById('current-updated-at')?.textContent?.trim();
+      const freshness = document.getElementById('version-freshness')?.textContent?.trim();
+      return Boolean(current && current !== '-' && freshness && freshness !== '確認中');
+    }, null, { timeout: 5000 });
 
     const cacheInfo = await page.evaluate(async () => {
       const cacheNames = await caches.keys();

@@ -148,6 +148,7 @@ async function run() {
       '/assets/js/modules/HybridStaticUtils.js',
       '/shared/js/KalmanFilter1D.js',
       '/shared/js/HybridStaticUtils.js',
+      '/shared/js/BuildInfo.js',
       '/assets/icons/icon-192.svg',
       '/assets/icons/icon-512.svg'
     ];
@@ -168,6 +169,11 @@ async function run() {
     await page.evaluate(async () => {
       await fetch('/docs/INDEX.md');
     });
+    await page.waitForFunction(() => {
+      const current = document.getElementById('current-updated-at')?.textContent?.trim();
+      const freshness = document.getElementById('version-freshness')?.textContent?.trim();
+      return Boolean(current && current !== '-' && freshness && freshness !== '確認中');
+    }, null, { timeout: 5000 });
 
     const cachePaths = await page.evaluate(async () => {
       const cacheNames = await caches.keys();

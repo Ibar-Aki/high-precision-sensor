@@ -7,6 +7,8 @@
     "doc": "docs"
   },
   "scripts": {
+    "stamp:version": "node scripts/stamp-version.mjs",
+    "deploy:prepare": "npm run stamp:version && npm test -- --run && npm run test:e2e:all",
     "test": "vitest",
     "test:e2e-smoke": "node tests/e2e-offline-smoke.mjs",
     "test:e2e:table-level": "node tests/e2e-table-level-smoke.mjs",

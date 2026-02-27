@@ -26,6 +26,9 @@ export class UIManager {
             sensorInfo: document.getElementById('sensor-info'),
             sessionId: document.getElementById('session-id'),
             statusCode: document.getElementById('status-code'),
+            currentUpdatedAt: document.getElementById('current-updated-at'),
+            latestUpdatedAt: document.getElementById('latest-updated-at'),
+            versionFreshness: document.getElementById('version-freshness'),
         };
 
         this.decimalPlaces = 2;
@@ -222,6 +225,21 @@ export class UIManager {
     setStatusCode(code) {
         if (!this.els.statusCode) return;
         this.els.statusCode.textContent = code || 'UNKNOWN';
+    }
+
+    setCurrentUpdatedAt(text) {
+        if (!this.els.currentUpdatedAt) return;
+        this.els.currentUpdatedAt.textContent = text || '-';
+    }
+
+    setLatestUpdatedAt(text) {
+        if (!this.els.latestUpdatedAt) return;
+        this.els.latestUpdatedAt.textContent = text || '--';
+    }
+
+    setVersionFreshness(statusText) {
+        if (!this.els.versionFreshness) return;
+        this.els.versionFreshness.textContent = statusText || '判定不能';
     }
 
     createRecordingButton(onStart, onStop) {

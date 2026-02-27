@@ -7,12 +7,19 @@ import { ToastManager } from './modules/ToastManager.js';
 import { LifecycleManager } from './modules/LifecycleManager.js';
 import { AppEventBinder } from './modules/AppEventBinder.js';
 import { refreshSoundSettingsVisibility } from './modules/SoundSettingsVisibility.js';
+import { CURRENT_UPDATED_AT_UTC, CURRENT_UPDATED_AT_JST } from '../../shared/js/BuildInfo.js';
 
 const MODE_LABEL = {
   active: '計測中',
   locking: '安定化中',
   measuring: '確定値'
 };
+const VERSION_FRESHNESS_LABEL = Object.freeze({
+  checking: '確認中',
+  latest: '最新版',
+  stale: '更新あり',
+  unknown: '判定不能'
+});
 const SETTINGS_PROFILE_VERSION = 3;
 const SETTINGS_PROFILE_FILTER_DEFAULTS = Object.freeze({
   emaAlpha: 0.06,
@@ -184,6 +191,9 @@ class App {
     this._lastStatusCode = 'INIT';
     this._lastMeasurementMode = null;
     this._sessionId = createSessionId();
+    this._versionPollIntervalMs = 60000;
+    this._versionPollTimerId = null;
+    this._versionCheckInFlight = false;
     this._permissionHelpOpenHandler = () => this._openPermissionHelp('PERMISSION_HELP_MANUAL');
     this._permissionHelpCloseHandler = () => this._closePermissionHelp();
 
@@ -231,6 +241,10 @@ class App {
     this._applySettings();
     this._bindPermissionHelp();
     this.ui.setSessionId(this._sessionId);
+    this.ui.setCurrentUpdatedAt(CURRENT_UPDATED_AT_JST);
+    this.ui.setLatestUpdatedAt('--');
+    this.ui.setVersionFreshness(VERSION_FRESHNESS_LABEL.checking);
+    this._startVersionFreshnessMonitor();
     this._setStatusCode('INIT');
     this._registerServiceWorker();
   }
@@ -592,6 +606,46 @@ class App {
     return { changed: true, settings: source };
   }
 
+  _startVersionFreshnessMonitor() {
+    this._checkVersionFreshness();
+    if (this._versionPollTimerId !== null) return;
+    this._versionPollTimerId = window.setInterval(() => {
+      this._checkVersionFreshness();
+    }, this._versionPollIntervalMs);
+  }
+
+  _stopVersionFreshnessMonitor() {
+    if (this._versionPollTimerId === null) return;
+    clearInterval(this._versionPollTimerId);
+    this._versionPollTimerId = null;
+  }
+
+  async _checkVersionFreshness() {
+    if (this._versionCheckInFlight) return;
+    this._versionCheckInFlight = true;
+    try {
+      const res = await fetch(`./version.json?ts=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`http_${res.status}`);
+      const payload = await res.json();
+      const latestUtc = typeof payload?.updatedAtUtc === 'string' ? payload.updatedAtUtc : null;
+      const latestJst = typeof payload?.updatedAtJst === 'string' ? payload.updatedAtJst : null;
+      if (!latestUtc || !latestJst) {
+        throw new Error('invalid_version_payload');
+      }
+      this.ui.setLatestUpdatedAt(latestJst);
+      this.ui.setVersionFreshness(
+        latestUtc === CURRENT_UPDATED_AT_UTC
+          ? VERSION_FRESHNESS_LABEL.latest
+          : VERSION_FRESHNESS_LABEL.stale
+      );
+    } catch {
+      this.ui.setLatestUpdatedAt('--');
+      this.ui.setVersionFreshness(VERSION_FRESHNESS_LABEL.unknown);
+    } finally {
+      this._versionCheckInFlight = false;
+    }
+  }
+
   async _registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     try {
@@ -605,6 +659,7 @@ class App {
     this.isRunning = false;
     this._starting = false;
     this._clearPendingSettingsSave();
+    this._stopVersionFreshnessMonitor();
     this.sensor.cancelTwoPointCalibration?.();
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);
