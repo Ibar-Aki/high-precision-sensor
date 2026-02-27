@@ -71,7 +71,15 @@ export class SettingsControlBinder {
             addListener(btn, 'click', () => {
                 document.querySelectorAll('[data-output-type]').forEach((b) => b.classList.remove('active'));
                 btn.classList.add('active');
-                this.audio.setOutputType(btn.dataset.outputType);
+                const outputType = btn.dataset.outputType;
+                this.audio.setOutputType(outputType);
+                if (outputType === 'speech' && !this.audio.enabled) {
+                    this.audio.enabled = true;
+                    document.getElementById('btn-sound-toggle')?.classList.add('active');
+                }
+                if (outputType === 'speech') {
+                    this.audio.primeSpeechAnnouncement?.();
+                }
                 refreshSoundSettingsVisibility(this.audio);
                 this.onSaveSettings?.();
             });
@@ -99,4 +107,3 @@ export class SettingsControlBinder {
         });
     }
 }
-

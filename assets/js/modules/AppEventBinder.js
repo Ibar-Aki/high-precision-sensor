@@ -32,11 +32,17 @@ export class AppEventBinder {
     bind() {
         this.destroy();
 
-        this._addListener(document.getElementById('btn-start'), 'click', () => this.onStart?.());
+        this._addListener(document.getElementById('btn-start'), 'click', () => {
+            this.audio.primeSpeechAnnouncement?.();
+            this.onStart?.();
+        });
 
         this._addListener(document.getElementById('btn-sound-toggle'), 'click', (e) => {
             const on = this.audio.toggle();
             e.currentTarget?.classList.toggle('active', on);
+            if (on) {
+                this.audio.primeSpeechAnnouncement?.();
+            }
             this.onSaveSettings?.();
         });
 
@@ -87,4 +93,3 @@ export class AppEventBinder {
         this._unbinders.push(() => target.removeEventListener(eventName, handler));
     }
 }
-

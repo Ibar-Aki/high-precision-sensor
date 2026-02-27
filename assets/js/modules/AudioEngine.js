@@ -332,6 +332,31 @@ export class AudioEngine {
         synth.speak(utterance);
     }
 
+    primeSpeechAnnouncement() {
+        if (!this.enabled || this.outputType !== 'speech' || typeof window === 'undefined') {
+            return false;
+        }
+        if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+            return false;
+        }
+        try {
+            const synth = window.speechSynthesis;
+            synth.resume?.();
+            const utterance = new SpeechSynthesisUtterance('音声読み上げを開始します');
+            utterance.lang = SPEECH_LANG;
+            utterance.volume = this.masterVolume;
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            synth.speak(utterance);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     _buildAnnouncement(pitch, roll) {
         const absPitch = Math.abs(pitch);
         const absRoll = Math.abs(roll);

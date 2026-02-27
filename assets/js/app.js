@@ -522,6 +522,7 @@ class App {
   _applySettings() {
     const s = this.settings;
     if (!s || Object.keys(s).length === 0) return;
+    const hasSoundEnabledSetting = Object.prototype.hasOwnProperty.call(s, 'soundEnabled');
 
     this._applySettingSchema(s, SETTINGS_APPLY_SCHEMA);
 
@@ -531,6 +532,10 @@ class App {
 
     const outputType = s.outputType ?? 'normal';
     this.audio.setOutputType(outputType);
+    if (outputType === 'speech' && !hasSoundEnabledSetting && !this.audio.enabled) {
+      this.audio.enabled = true;
+      document.getElementById('btn-sound-toggle')?.classList.add('active');
+    }
     document.querySelectorAll('[data-output-type]').forEach(b => {
       b.classList.toggle('active', b.dataset.outputType === outputType);
     });

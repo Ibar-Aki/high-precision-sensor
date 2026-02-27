@@ -231,6 +231,19 @@ describe('AudioEngine', () => {
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
     });
 
+    it('primeSpeechAnnouncement が speech 有効時に即時読み上げを行うこと', () => {
+        const engine = new AudioEngine();
+        engine.enabled = true;
+        engine.setOutputType('speech');
+        engine.init();
+
+        const primed = engine.primeSpeechAnnouncement();
+        expect(primed).toBe(true);
+        expect(speechSynthesisMock.speak).toHaveBeenCalled();
+        const utterance = speechSynthesisMock.speak.mock.calls[0][0];
+        expect(utterance.text).toContain('音声読み上げを開始');
+    });
+
     it('AudioContext再開要求を多重発行しないこと', () => {
         const engine = new AudioEngine();
         engine.enabled = true;
