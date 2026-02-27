@@ -118,32 +118,32 @@ describe('AudioEngine', () => {
         }
     });
 
-    it('読み上げ音モードで10秒ごとに0.1度単位の文言を読み上げること', () => {
+    it('読み上げ音モードで20秒ごとに0.1度単位の文言を読み上げること', () => {
         const engine = new AudioEngine();
         engine.enabled = true;
         engine.setOutputType('speech');
         engine.init();
 
         engine.update(-0.14, -0.48);
-        vi.advanceTimersByTime(10000);
+        vi.advanceTimersByTime(20000);
 
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
         const first = speechSynthesisMock.speak.mock.calls[0][0];
-        expect(first.text).toBe('ピッチ前上がり0.1度、ロール左上がり0.5度');
+        expect(first.text).toBe('前後、、前上がり0.1ど、、。左右、、左上がり0.5ど');
         expect(first.lang).toBe('ja-JP');
         expect(first.volume).toBe(0.5);
 
         engine.update(0.44, 2.26);
-        vi.advanceTimersByTime(10000);
+        vi.advanceTimersByTime(20000);
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(2);
         const second = speechSynthesisMock.speak.mock.calls[1][0];
-        expect(second.text).toBe('ピッチ後ろ上がり0.4度、ロール右上がり2.3度');
+        expect(second.text).toBe('前後、、後ろ上がり0.4ど、、。左右、、右上がり2.3ど');
     });
 
     it('水平付近の読み上げ文言を適切に返すこと', () => {
         const engine = new AudioEngine();
-        expect(engine._buildAnnouncement(0, 0)).toBe('ほぼ水平です');
-        expect(engine._buildAnnouncement(0, -0.12)).toBe('ピッチ0.0度（水平）、ロール左上がり0.1度');
+        expect(engine._buildAnnouncement(0, 0)).toBe('前後、、水平0.0ど、、。左右、、水平0.0ど');
+        expect(engine._buildAnnouncement(0, -0.12)).toBe('前後、、水平0.0ど、、。左右、、左上がり0.1ど');
     });
 
     it('OFFモードでは読み上げを停止し、追加読み上げを行わないこと', () => {
@@ -153,7 +153,7 @@ describe('AudioEngine', () => {
         engine.init();
         engine.update(1.2, -0.7);
 
-        vi.advanceTimersByTime(10000);
+        vi.advanceTimersByTime(20000);
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
 
         engine.setOutputType('off');
@@ -172,7 +172,7 @@ describe('AudioEngine', () => {
         engine.threshold = 5.0;
 
         engine.update(1.0, 1.0);
-        vi.advanceTimersByTime(10000);
+        vi.advanceTimersByTime(20000);
 
         expect(speechSynthesisMock.speak).not.toHaveBeenCalled();
         expect(engine.gains.front.gain.setTargetAtTime).toHaveBeenCalled();
@@ -186,7 +186,7 @@ describe('AudioEngine', () => {
         engine.init();
         engine.update(-0.2, 0.3);
 
-        vi.advanceTimersByTime(10000);
+        vi.advanceTimersByTime(20000);
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
 
         const enabled = engine.toggle();
@@ -226,7 +226,7 @@ describe('AudioEngine', () => {
         engine.setOutputType('speech');
         engine.init();
         engine.update(-0.2, 0.3);
-        vi.advanceTimersByTime(10000);
+        vi.advanceTimersByTime(20000);
 
         expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
     });
